@@ -18,6 +18,8 @@ jobs:
           chmod 600 "$HOME/.config/sud/max-bot.env"
       - name: Install and restart bot
         run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
           "$HOME/sud-app/scripts/install_max_bot_service.sh"
           systemctl --user restart sud-max-bot.service
           systemctl --user status sud-max-bot.service --no-pager

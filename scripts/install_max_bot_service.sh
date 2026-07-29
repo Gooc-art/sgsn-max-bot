@@ -31,4 +31,4 @@ EOF
 
 systemctl --user daemon-reload
 systemctl --user enable sud-max-bot.service
-systemctl --user status sud-max-bot.service
+systemctl --user status sud-max-bot.service || true
