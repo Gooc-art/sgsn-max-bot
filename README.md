@@ -76,3 +76,9 @@ python3 sud_export.py --from 2026-07-27 --to 2026-07-27 \
 Он рассчитан на GitHub Actions self-hosted runner внутри той же сети, где
 доступен сервер/папка деплоя. GitHub-hosted runner не достучится до приватного
 IP `10.10.68.10`.
+
+Runner будет выкладывать код в:
+
+```text
+$HOME/sud-app
+```

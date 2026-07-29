@@ -11,6 +11,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Deploy locally
         run: |
-          mkdir -p /opt/sud
-          rsync -a --delete --exclude output --exclude .git ./ /opt/sud/
-          chmod +x /opt/sud/sud_export.py
+          mkdir -p "$HOME/sud-app"
+          rsync -a --delete --exclude output --exclude .git ./ "$HOME/sud-app/"
+          chmod +x "$HOME/sud-app/sud_export.py"
