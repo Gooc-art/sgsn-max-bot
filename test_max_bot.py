@@ -100,6 +100,30 @@ class MaxBotTest(unittest.TestCase):
                         self.assertTrue(shown, payload)
                         self.assertNotEqual(shown[-1], "Выберите действие.", payload)
 
+    def test_stale_court_button_without_period_asks_for_period(self):
+        b.sessions.clear()
+        shown = []
+        with mock.patch.object(b, "show_menu", side_effect=lambda _target, text, _buttons: shown.append(text)):
+            with mock.patch.object(b, "ack_callback") as ack:
+                b.handle({"user_id": 42}, "", "court:all", "cb1")
+
+        ack.assert_called_once_with("cb1")
+        self.assertEqual(b.sessions["42"].step, "period")
+        self.assertEqual(shown[-1], "Сначала выберите период выгрузки.")
+
+    def test_stale_confirm_button_without_period_does_not_start_job(self):
+        b.sessions.clear()
+        shown = []
+        with mock.patch.object(b, "show_menu", side_effect=lambda _target, text, _buttons: shown.append(text)):
+            with mock.patch.object(b, "ack_callback") as ack:
+                with mock.patch.object(b, "start_job") as start_job:
+                    b.handle({"user_id": 42}, "", "run_confirm", "cb1")
+
+        ack.assert_called_once_with("cb1")
+        start_job.assert_not_called()
+        self.assertEqual(b.sessions["42"].step, "period")
+        self.assertEqual(shown[-1], "Сначала выберите период выгрузки.")
+
 
 if __name__ == "__main__":
     unittest.main()

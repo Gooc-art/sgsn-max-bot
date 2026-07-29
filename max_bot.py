@@ -303,8 +303,9 @@ def worker() -> None:
 
 
 def extract_event(update: dict) -> tuple[dict, str, str, str]:
-    callback = update.get("callback") or update.get("message_callback") or {}
-    message = update.get("message") or update.get("message_created", {}).get("message") or {}
+    event = update.get("message_callback") or {}
+    callback = update.get("callback") or event.get("callback") or event
+    message = update.get("message") or event.get("message") or update.get("message_created", {}).get("message") or {}
     body = message.get("body") or {}
     text = body.get("text") or message.get("text") or ""
     payload = callback.get("payload") or ""
@@ -312,9 +313,12 @@ def extract_event(update: dict) -> tuple[dict, str, str, str]:
     chat = message.get("chat") or message.get("recipient") or callback.get("chat") or {}
     user = message.get("sender") or message.get("user") or callback.get("user") or {}
     target = {}
-    if chat.get("chat_id") or message.get("chat_id") or callback.get("chat_id"):
-        target["chat_id"] = chat.get("chat_id") or message.get("chat_id") or callback.get("chat_id")
-    target["user_id"] = user.get("user_id") or message.get("user_id") or callback.get("user_id")
+    chat_id = chat.get("chat_id") or message.get("chat_id") or callback.get("chat_id") or update.get("chat_id")
+    user_id = user.get("user_id") or message.get("user_id") or callback.get("user_id") or update.get("user_id")
+    if chat_id:
+        target["chat_id"] = chat_id
+    if user_id:
+        target["user_id"] = user_id
     return target, text.strip(), payload.strip(), callback_id
 
 
@@ -355,17 +359,25 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
         sess.step = "period_court"
         show_menu(target, "Выберите суд.", court_buttons("court"))
     elif action.startswith("court:"):
-        court = action.split(":", 1)[1]
-        sess.court = None if court == "all" else court
-        sess.step = "confirm"
-        show_confirm(target, sess)
+        if not sess.date_from or not sess.date_to:
+            sess.step = "period"
+            show_menu(target, "Сначала выберите период выгрузки.", period_buttons())
+        else:
+            court = action.split(":", 1)[1]
+            sess.court = None if court == "all" else court
+            sess.step = "confirm"
+            show_confirm(target, sess)
     elif action == "run_confirm":
-        try:
-            job = start_job(target, sess.date_from or date.today(), sess.date_to or date.today(), sess.court)
-            sess.step = "running"
-            show_menu(target, f"Принял, собираю отчет за {job.date_from:%d.%m.%Y}-{job.date_to:%d.%m.%Y}. Это может занять несколько минут.", [[("📌 Статус выгрузки", "status")], [("🏠 Главное меню", "main")]])
-        except ValueError as exc:
-            show_menu(target, str(exc), main_buttons())
+        if not sess.date_from or not sess.date_to:
+            sess.step = "period"
+            show_menu(target, "Сначала выберите период выгрузки.", period_buttons())
+        else:
+            try:
+                job = start_job(target, sess.date_from, sess.date_to, sess.court)
+                sess.step = "running"
+                show_menu(target, f"Принял, собираю отчет за {job.date_from:%d.%m.%Y}-{job.date_to:%d.%m.%Y}. Это может занять несколько минут.", [[("📌 Статус выгрузки", "status")], [("🏠 Главное меню", "main")]])
+            except ValueError as exc:
+                show_menu(target, str(exc), main_buttons())
     elif sess.step == "from":
         parsed = parse_ru_date(text)
         if not parsed:
