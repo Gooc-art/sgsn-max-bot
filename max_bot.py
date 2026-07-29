@@ -141,7 +141,18 @@ def show_menu(target: dict, text: str, buttons: list[list[tuple[str, str]]]) -> 
 
 def answer_callback(callback_id: str, text: str = "") -> None:
     if callback_id:
-        request("POST", "/answers", {"callback_id": callback_id}, {"message": {"text": text or "Принято"}})
+        request("POST", "/answers", {"callback_id": callback_id}, {"notification": text or "Принято"})
+
+
+def ack_callback(callback_id: str) -> None:
+    def run() -> None:
+        try:
+            answer_callback(callback_id, "Принято")
+        except Exception as exc:
+            print(f"callback answer error: {exc}", file=sys.stderr)
+
+    if callback_id:
+        threading.Thread(target=run, daemon=True).start()
 
 
 def upload_and_send_file(target: dict, path: Path, caption: str) -> None:
@@ -313,11 +324,6 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
     key = session_key(target)
     sess = sessions.setdefault(key, Session())
     action = payload or text
-    if callback_id:
-        try:
-            answer_callback(callback_id, "Принято")
-        except Exception as exc:
-            print(f"callback answer error: {exc}", file=sys.stderr)
 
     if action in {"/start", "start", "Старт", "main"}:
         sess.step = ""
@@ -381,6 +387,10 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
         show_menu(target, "Выберите суд.", court_buttons("court"))
     else:
         show_menu(target, "Выберите действие.", main_buttons())
+    try:
+        ack_callback(callback_id)
+    except Exception as exc:
+        print(f"callback answer error: {exc}", file=sys.stderr)
 
 
 def poll() -> None:
