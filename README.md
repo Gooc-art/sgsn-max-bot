@@ -81,11 +81,14 @@ python3 sud_export.py --from 2026-07-27 --to 2026-07-27 \
 доступен сервер/папка деплоя. GitHub-hosted runner не достучится до приватного
 IP `10.10.68.10`.
 
-Runner будет выкладывать код в:
+Push в `main` автоматически выкладывает код в:
 
 ```text
 $HOME/sud-app
 ```
+
+Workflow деплоя только обновляет файлы. Для перезапуска MAX-бота используйте
+ручной workflow `.github/workflows/max-bot.yml`.
 
 Статус runner проверяется на странице Actions runners в GitHub.
 
