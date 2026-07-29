@@ -408,7 +408,7 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
 def poll() -> None:
     marker = None
     while True:
-        params = {"limit": 20, "timeout": 30, "types": ["bot_started", "message_created", "message_callback"]}
+        params = {"limit": 20, "timeout": 30, "types": "bot_started,message_created,message_callback"}
         if marker is not None:
             params["marker"] = marker
         data = request("GET", "/updates", params)

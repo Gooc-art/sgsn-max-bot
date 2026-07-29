@@ -121,7 +121,7 @@ class MaxBotTest(unittest.TestCase):
             with self.assertRaises(KeyboardInterrupt):
                 b.poll()
 
-        self.assertEqual(calls[0]["types"], ["bot_started", "message_created", "message_callback"])
+        self.assertEqual(calls[0]["types"], "bot_started,message_created,message_callback")
 
     def test_stale_court_button_without_period_asks_for_period(self):
         b.sessions.clear()
