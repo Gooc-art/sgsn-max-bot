@@ -82,3 +82,5 @@ Runner будет выкладывать код в:
 ```text
 $HOME/sud-app
 ```
+
+Статус runner проверяется на странице Actions runners в GitHub.
