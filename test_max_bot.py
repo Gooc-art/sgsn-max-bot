@@ -51,6 +51,16 @@ class MaxBotTest(unittest.TestCase):
         self.assertEqual(payload, "week")
         self.assertEqual(callback_id, "cb1")
 
+    def test_extract_bot_started_as_start(self):
+        target, text, payload, callback_id = b.extract_event(
+            {"update_type": "bot_started", "chat_id": 7, "user": {"user_id": 42}}
+        )
+
+        self.assertEqual(target, {"chat_id": 7, "user_id": 42})
+        self.assertEqual(text, "/start")
+        self.assertEqual(payload, "")
+        self.assertEqual(callback_id, "")
+
     def test_callback_action_survives_answer_failure(self):
         b.sessions.clear()
         shown = []
@@ -99,6 +109,19 @@ class MaxBotTest(unittest.TestCase):
                         b.handle(target, "", payload, "cb1")
                         self.assertTrue(shown, payload)
                         self.assertNotEqual(shown[-1], "Выберите действие.", payload)
+
+    def test_poll_subscribes_to_start_and_buttons(self):
+        calls = []
+
+        def fake_request(_method, _path, params):
+            calls.append(params)
+            raise KeyboardInterrupt
+
+        with mock.patch.object(b, "request", side_effect=fake_request):
+            with self.assertRaises(KeyboardInterrupt):
+                b.poll()
+
+        self.assertEqual(calls[0]["types"], ["bot_started", "message_created", "message_callback"])
 
     def test_stale_court_button_without_period_asks_for_period(self):
         b.sessions.clear()

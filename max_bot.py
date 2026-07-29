@@ -307,11 +307,11 @@ def extract_event(update: dict) -> tuple[dict, str, str, str]:
     callback = update.get("callback") or event.get("callback") or event
     message = update.get("message") or event.get("message") or update.get("message_created", {}).get("message") or {}
     body = message.get("body") or {}
-    text = body.get("text") or message.get("text") or ""
+    text = body.get("text") or message.get("text") or ("/start" if update.get("update_type") == "bot_started" else "")
     payload = callback.get("payload") or ""
     callback_id = callback.get("callback_id") or ""
     chat = message.get("chat") or message.get("recipient") or callback.get("chat") or {}
-    user = message.get("sender") or message.get("user") or callback.get("user") or {}
+    user = message.get("sender") or message.get("user") or callback.get("user") or update.get("user") or {}
     target = {}
     chat_id = chat.get("chat_id") or message.get("chat_id") or callback.get("chat_id") or update.get("chat_id")
     user_id = user.get("user_id") or message.get("user_id") or callback.get("user_id") or update.get("user_id")
@@ -408,7 +408,7 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
 def poll() -> None:
     marker = None
     while True:
-        params = {"limit": 20, "timeout": 30, "types": ["message_created", "message_callback"]}
+        params = {"limit": 20, "timeout": 30, "types": ["bot_started", "message_created", "message_callback"]}
         if marker is not None:
             params["marker"] = marker
         data = request("GET", "/updates", params)
