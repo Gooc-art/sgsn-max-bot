@@ -1,0 +1,16 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy locally
+        run: |
+          mkdir -p /opt/sud
+          rsync -a --delete --exclude output --exclude .git ./ /opt/sud/
+          chmod +x /opt/sud/sud_export.py
