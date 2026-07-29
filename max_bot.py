@@ -298,7 +298,7 @@ def extract_event(update: dict) -> tuple[dict, str, str, str]:
     text = body.get("text") or message.get("text") or ""
     payload = callback.get("payload") or ""
     callback_id = callback.get("callback_id") or ""
-    chat = message.get("chat") or callback.get("chat") or {}
+    chat = message.get("chat") or message.get("recipient") or callback.get("chat") or {}
     user = message.get("sender") or message.get("user") or callback.get("user") or {}
     target = {}
     if chat.get("chat_id") or message.get("chat_id") or callback.get("chat_id"):
@@ -314,7 +314,10 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
     sess = sessions.setdefault(key, Session())
     action = payload or text
     if callback_id:
-        answer_callback(callback_id, "Принято")
+        try:
+            answer_callback(callback_id, "Принято")
+        except Exception as exc:
+            print(f"callback answer error: {exc}", file=sys.stderr)
 
     if action in {"/start", "start", "Старт", "main"}:
         sess.step = ""
