@@ -84,3 +84,27 @@ $HOME/sud-app
 ```
 
 Статус runner проверяется на странице Actions runners в GitHub.
+
+## MAX бот
+
+Для первого запуска используется Long Polling:
+
+```bash
+cd ~/sud-app
+MAX_TOKEN=token_from_max python3 max_bot.py --poll
+```
+
+Установка user-service:
+
+```bash
+cd ~/sud-app
+MAX_TOKEN=token_from_max ./scripts/install_max_bot_service.sh
+```
+
+Команды бота:
+
+- `/start` — главное меню.
+- `/week` — выгрузка за прошлую полную неделю.
+- `/period` — выбор периода.
+- `/status` — статус последней задачи.
+- `/cancel` — отмена ввода.
