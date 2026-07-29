@@ -160,26 +160,26 @@ def upload_and_send_file(target: dict, path: Path, caption: str) -> None:
 
 
 def main_buttons() -> list[list[tuple[str, str]]]:
-    return [[("Выгрузка за неделю", "week")], [("Выбрать период", "period"), ("Статус выгрузки", "status")], [("Отмена", "cancel")]]
+    return [[("📊 Выгрузка за неделю", "week")], [("📅 Выбрать период", "period"), ("📌 Статус выгрузки", "status")], [("❌ Отмена", "cancel")]]
 
 
 def nav_buttons(back: str = "main") -> list[tuple[str, str]]:
-    return [("Назад", back), ("Главное меню", "main")]
+    return [("⬅️ Назад", back), ("🏠 Главное меню", "main")]
 
 
 def period_buttons() -> list[list[tuple[str, str]]]:
-    return [[("Текущая неделя", "period_current"), ("Прошлая неделя", "week")], [("Свой период", "period_custom")], nav_buttons()]
+    return [[("📆 Текущая неделя", "period_current"), ("📊 Прошлая неделя", "week")], [("✏️ Свой период", "period_custom")], nav_buttons()]
 
 
 def court_buttons(prefix: str) -> list[list[tuple[str, str]]]:
-    rows = [[("Все суды", f"{prefix}:all")]]
+    rows = [[("🏛 Все суды", f"{prefix}:all")]]
     rows += [[(name.replace(" городской суд", ""), f"{prefix}:{host}")] for host, name in COURTS.items()]
     rows.append(nav_buttons("period"))
     return rows
 
 
 def confirm_buttons() -> list[list[tuple[str, str]]]:
-    return [[("Запустить выгрузку", "run_confirm")], [("Изменить период", "period"), ("Изменить суд", "choose_court")], [("Главное меню", "main")]]
+    return [[("✅ Запустить выгрузку", "run_confirm")], [("📅 Изменить период", "period"), ("🏛 Изменить суд", "choose_court")], [("🏠 Главное меню", "main")]]
 
 
 def last_full_week(today: date | None = None) -> tuple[date, date]:
@@ -336,9 +336,9 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
     elif action == "status" or action == "/status":
         job = jobs.get(sess.last_job or "")
         if not job:
-            show_menu(target, "Задач пока нет.", [[("Обновить статус", "status")], [("Главное меню", "main")]])
+            show_menu(target, "Задач пока нет.", [[("🔄 Обновить статус", "status")], [("🏠 Главное меню", "main")]])
         else:
-            show_menu(target, f"Последняя задача: {job.status}. Записей: {job.rows}. Ошибка: {job.error or '-'}", [[("Обновить статус", "status")], [("Главное меню", "main")]])
+            show_menu(target, f"Последняя задача: {job.status}. Записей: {job.rows}. Ошибка: {job.error or '-'}", [[("🔄 Обновить статус", "status")], [("🏠 Главное меню", "main")]])
     elif action in {"cancel", "/cancel"}:
         sess.step = ""
         show_menu(target, "Отменено.", main_buttons())
@@ -354,7 +354,7 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
         try:
             job = start_job(target, sess.date_from or date.today(), sess.date_to or date.today(), sess.court)
             sess.step = "running"
-            show_menu(target, f"Принял. Готовлю выгрузку {job.date_from:%d.%m.%Y}-{job.date_to:%d.%m.%Y}.", [[("Статус выгрузки", "status")], [("Главное меню", "main")]])
+            show_menu(target, f"Принял, собираю отчет за {job.date_from:%d.%m.%Y}-{job.date_to:%d.%m.%Y}. Это может занять несколько минут.", [[("📌 Статус выгрузки", "status")], [("🏠 Главное меню", "main")]])
         except ValueError as exc:
             show_menu(target, str(exc), main_buttons())
     elif sess.step == "from":
