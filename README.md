@@ -98,7 +98,14 @@ MAX_TOKEN=token_from_max python3 max_bot.py --poll
 
 ```bash
 cd ~/sud-app
-MAX_TOKEN=token_from_max ./scripts/install_max_bot_service.sh
+./scripts/install_max_bot_service.sh
+```
+
+Токен хранится вне репозитория:
+
+```bash
+nano ~/.config/sud/max-bot.env
+systemctl --user restart sud-max-bot.service
 ```
 
 Команды бота:

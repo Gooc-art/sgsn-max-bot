@@ -3,3 +3,6 @@ __pycache__/
 output/
 venv/
 *.log
+.env
+.env.*
+!.env.max.example
