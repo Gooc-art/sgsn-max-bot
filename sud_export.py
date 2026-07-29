@@ -5,6 +5,7 @@ import argparse
 import csv
 import html
 import re
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -259,19 +260,40 @@ def col_name(n: int) -> str:
 
 
 def write_xlsx(path: Path, rows: list[list[str]]) -> None:
-    cells = []
+    widths = [28, 12, 28, 13, 24, 45, 24, 90, 28, 90, 90, 28, 55, 16]
+    row_xmls = []
     for r, row in enumerate(rows, 1):
+        cells = []
         for c, value in enumerate(row, 1):
             ref = f"{col_name(c)}{r}"
-            cells.append(f'<c r="{ref}" t="inlineStr"><is><t>{escape(value or "")}</t></is></c>')
+            style = 2 if r == 1 else 1
+            cells.append(f'<c r="{ref}" s="{style}" t="inlineStr"><is><t>{escape(value or "")}</t></is></c>')
+        height = ' ht="36" customHeight="1"' if r == 1 else ' ht="54" customHeight="1"'
+        row_xmls.append(f'<row r="{r}"{height}>{"".join(cells)}</row>')
+    cols = "".join(f'<col min="{i}" max="{i}" width="{width}" customWidth="1"/>' for i, width in enumerate(widths, 1))
+    last_ref = f"{col_name(len(HEADERS))}{len(rows)}"
     sheet = f'''<?xml version="1.0" encoding="UTF-8"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>{''.join(f'<row r="{i}">{"".join(cells[(i-1)*len(HEADERS):i*len(HEADERS)])}</row>' for i in range(1, len(rows)+1))}</sheetData></worksheet>'''
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="54"/><cols>{cols}</cols><sheetData>{''.join(row_xmls)}</sheetData>
+<autoFilter ref="A1:{last_ref}"/><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>
+</worksheet>'''
+    styles = '''<?xml version="1.0" encoding="UTF-8"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts>
+<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEFEFEF"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="1"><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="1" borderId="0" applyAlignment="1" applyFill="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>'''
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
+        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
         z.writestr("_rels/.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
         z.writestr("xl/workbook.xml", '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets></workbook>')
-        z.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')
+        z.writestr("xl/styles.xml", styles)
         z.writestr("xl/worksheets/sheet1.xml", sheet)
 
 
@@ -297,7 +319,22 @@ def pdf_text(s: str) -> str:
     return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
-def write_pdf(path: Path, rows: list[list[str]]) -> None:
+def write_pdf(path: Path, rows: list[list[str]], html_path: Path | None = None) -> None:
+    if html_path:
+        if shutil.which("libreoffice"):
+            subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", str(path.parent), str(html_path)], check=True, timeout=180)
+            converted = path.parent / f"{html_path.stem}.pdf"
+            if converted != path and converted.exists():
+                converted.replace(path)
+            if path.exists():
+                return
+        if shutil.which("wkhtmltopdf"):
+            subprocess.run(["wkhtmltopdf", "--orientation", "Landscape", str(html_path), str(path)], check=True, timeout=180)
+            return
+        browser = shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
+        if browser:
+            subprocess.run([browser, "--headless", "--disable-gpu", f"--print-to-pdf={path}", str(html_path)], check=True, timeout=180)
+            return
     lines = [" | ".join(row[:8]) for row in rows[:200]]
     content = ["BT /F1 8 Tf 40 800 Td"]
     for line in lines:
@@ -342,8 +379,9 @@ def main(argv: list[str] | None = None) -> int:
     rows, log = collect(start, end, outdir, args.refresh, set(args.court or []), args.timeout, args.max_cases)
     table = [HEADERS] + (sort_by_lawyer(rows) if args.sort_by_lawyer else [row.cells() for row in rows])
     write_xlsx(outdir / "report.xlsx", table)
-    write_html(outdir / "report.html", table)
-    write_pdf(outdir / "report.pdf", table)
+    html_path = outdir / "report.html"
+    write_html(html_path, table)
+    write_pdf(outdir / "report.pdf", table, html_path)
     write_csv(outdir / "report.csv", table)
     write_csv(outdir / "run_log.csv", [["Суд", "Дата", "URL", "Ошибка", "Детали"], *log])
     print(f"rows={len(rows)} xlsx={outdir / 'report.xlsx'} pdf={outdir / 'report.pdf'} log={outdir / 'run_log.csv'}")
