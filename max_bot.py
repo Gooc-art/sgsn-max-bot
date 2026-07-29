@@ -29,10 +29,12 @@ MAX_DAYS = int(os.environ.get("SUD_MAX_DAYS", "31"))
 @dataclass
 class Session:
     step: str = ""
+    prev_step: str = ""
     date_from: date | None = None
     date_to: date | None = None
     court: str | None = None
     last_job: str | None = None
+    menu_message_id: str | None = None
 
 
 @dataclass
@@ -105,12 +107,36 @@ def keyboard(rows: list[list[tuple[str, str]]]) -> dict:
     }
 
 
-def send_text(target: dict, text: str, buttons: list[list[tuple[str, str]]] | None = None) -> None:
+def message_id(response: dict) -> str | None:
+    return (
+        response.get("message_id")
+        or response.get("mid")
+        or (response.get("body") or {}).get("mid")
+        or ((response.get("message") or {}).get("body") or {}).get("mid")
+        or (response.get("message") or {}).get("message_id")
+    )
+
+
+def send_text(target: dict, text: str, buttons: list[list[tuple[str, str]]] | None = None) -> dict:
     body = {"text": text[:4000]}
     if buttons:
         body["attachments"] = [keyboard(buttons)]
-    request("POST", "/messages", target_params(target), body)
+    response = request("POST", "/messages", target_params(target), body)
     time.sleep(0.55)
+    return response
+
+
+def show_menu(target: dict, text: str, buttons: list[list[tuple[str, str]]]) -> None:
+    sess = sessions.setdefault(session_key(target), Session())
+    body = {"text": text[:4000], "attachments": [keyboard(buttons)]}
+    if sess.menu_message_id:
+        try:
+            request("PUT", "/messages", {"message_id": sess.menu_message_id}, body)
+            time.sleep(0.55)
+            return
+        except Exception:
+            pass
+    sess.menu_message_id = message_id(send_text(target, text, buttons))
 
 
 def answer_callback(callback_id: str, text: str = "") -> None:
@@ -134,20 +160,38 @@ def upload_and_send_file(target: dict, path: Path, caption: str) -> None:
 
 
 def main_buttons() -> list[list[tuple[str, str]]]:
-    return [[("За прошлую неделю", "week")], [("Выбрать период", "period"), ("Статус", "status")]]
+    return [[("Выгрузка за неделю", "week")], [("Выбрать период", "period"), ("Статус выгрузки", "status")], [("Отмена", "cancel")]]
+
+
+def nav_buttons(back: str = "main") -> list[tuple[str, str]]:
+    return [("Назад", back), ("Главное меню", "main")]
+
+
+def period_buttons() -> list[list[tuple[str, str]]]:
+    return [[("Текущая неделя", "period_current"), ("Прошлая неделя", "week")], [("Свой период", "period_custom")], nav_buttons()]
 
 
 def court_buttons(prefix: str) -> list[list[tuple[str, str]]]:
     rows = [[("Все суды", f"{prefix}:all")]]
     rows += [[(name.replace(" городской суд", ""), f"{prefix}:{host}")] for host, name in COURTS.items()]
-    rows.append([("Отмена", "cancel")])
+    rows.append(nav_buttons("period"))
     return rows
+
+
+def confirm_buttons() -> list[list[tuple[str, str]]]:
+    return [[("Запустить выгрузку", "run_confirm")], [("Изменить период", "period"), ("Изменить суд", "choose_court")], [("Главное меню", "main")]]
 
 
 def last_full_week(today: date | None = None) -> tuple[date, date]:
     today = today or date.today()
     this_monday = today - timedelta(days=today.weekday())
     start = this_monday - timedelta(days=7)
+    return start, start + timedelta(days=6)
+
+
+def current_week(today: date | None = None) -> tuple[date, date]:
+    today = today or date.today()
+    start = today - timedelta(days=today.weekday())
     return start, start + timedelta(days=6)
 
 
@@ -184,6 +228,18 @@ def start_job(target: dict, start: date, end: date, court: str | None) -> Job:
     return job
 
 
+def court_name(host: str | None) -> str:
+    return COURTS.get(host, "Все суды ЯНАО") if host else "Все суды ЯНАО"
+
+
+def show_confirm(target: dict, sess: Session) -> None:
+    show_menu(
+        target,
+        f"Проверьте параметры:\nПериод: {sess.date_from:%d.%m.%Y}-{sess.date_to:%d.%m.%Y}\nСуд: {court_name(sess.court)}",
+        confirm_buttons(),
+    )
+
+
 def worker() -> None:
     while True:
         job = job_queue.get()
@@ -210,7 +266,7 @@ def worker() -> None:
             match = re.search(r"rows=(\d+)", result.stdout)
             job.rows = int(match.group(1)) if match else rows_count(job.outdir / "report.csv")
             job.status = "done"
-            send_text(job.target, f"Готово. Найдено записей: {job.rows}. Отправляю файлы.")
+            show_menu(job.target, f"Готово. Найдено записей: {job.rows}. Отправляю файлы.", [[("Новая выгрузка", "period")], [("Главное меню", "main")]])
             for name, caption in (
                 ("report.xlsx", "Excel-отчет"),
                 ("report.pdf", "PDF-версия"),
@@ -223,11 +279,11 @@ def worker() -> None:
             log = job.outdir / "run_log.csv"
             if log.exists() and log.stat().st_size > 64:
                 upload_and_send_file(job.target, log, "Лог выполнения")
-            send_text(job.target, "Можно запускать новую выгрузку.", main_buttons())
+            show_menu(job.target, "Можно запускать новую выгрузку.", main_buttons())
         except Exception as exc:
             job.status = "error"
             job.error = str(exc)
-            send_text(job.target, f"Выгрузка не завершилась: {job.error[:1000]}")
+            show_menu(job.target, f"Выгрузка не завершилась: {job.error[:1000]}", [[("Статус выгрузки", "status")], [("Главное меню", "main")]])
             log = job.outdir / "run_log.csv"
             if log.exists():
                 upload_and_send_file(job.target, log, "Лог выполнения")
@@ -260,53 +316,68 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
     if callback_id:
         answer_callback(callback_id, "Принято")
 
-    if action in {"/start", "start", "Старт"}:
-        send_text(target, "Бот делает выгрузку судебных дел ЯНАО в Excel/PDF/CSV.", main_buttons())
+    if action in {"/start", "start", "Старт", "main"}:
+        sess.step = ""
+        show_menu(target, "Бот делает выгрузку судебных дел ЯНАО в Excel/PDF/CSV.", main_buttons())
     elif action in {"/week", "week"}:
         sess.date_from, sess.date_to = last_full_week()
         sess.step = "week_court"
-        send_text(target, f"Период: {sess.date_from:%d.%m.%Y}-{sess.date_to:%d.%m.%Y}. Выберите суд.", court_buttons("run"))
+        show_menu(target, f"Период: {sess.date_from:%d.%m.%Y}-{sess.date_to:%d.%m.%Y}. Выберите суд.", court_buttons("court"))
     elif action in {"/period", "period"}:
+        sess.step = "period"
+        show_menu(target, "Выберите период выгрузки.", period_buttons())
+    elif action == "period_current":
+        sess.date_from, sess.date_to = current_week()
+        sess.step = "period_court"
+        show_menu(target, f"Период: {sess.date_from:%d.%m.%Y}-{sess.date_to:%d.%m.%Y}. Выберите суд.", court_buttons("court"))
+    elif action == "period_custom":
         sess.step = "from"
-        send_text(target, "Введите дату начала в формате ДД.ММ.ГГГГ.")
+        show_menu(target, "Введите дату начала в формате ДД.ММ.ГГГГ.", [nav_buttons("period")])
     elif action == "status" or action == "/status":
         job = jobs.get(sess.last_job or "")
         if not job:
-            send_text(target, "Задач пока нет.", main_buttons())
+            show_menu(target, "Задач пока нет.", [[("Обновить статус", "status")], [("Главное меню", "main")]])
         else:
-            send_text(target, f"Последняя задача: {job.status}. Записей: {job.rows}. Ошибка: {job.error or '-'}", main_buttons())
+            show_menu(target, f"Последняя задача: {job.status}. Записей: {job.rows}. Ошибка: {job.error or '-'}", [[("Обновить статус", "status")], [("Главное меню", "main")]])
     elif action in {"cancel", "/cancel"}:
         sess.step = ""
-        send_text(target, "Отменено.", main_buttons())
-    elif action.startswith("run:"):
+        show_menu(target, "Отменено.", main_buttons())
+    elif action == "choose_court":
+        sess.step = "period_court"
+        show_menu(target, "Выберите суд.", court_buttons("court"))
+    elif action.startswith("court:"):
         court = action.split(":", 1)[1]
-        court = None if court == "all" else court
+        sess.court = None if court == "all" else court
+        sess.step = "confirm"
+        show_confirm(target, sess)
+    elif action == "run_confirm":
         try:
-            job = start_job(target, sess.date_from or date.today(), sess.date_to or date.today(), court)
-            send_text(target, f"Принял. Готовлю выгрузку {job.date_from:%d.%m.%Y}-{job.date_to:%d.%m.%Y}.")
+            job = start_job(target, sess.date_from or date.today(), sess.date_to or date.today(), sess.court)
+            sess.step = "running"
+            show_menu(target, f"Принял. Готовлю выгрузку {job.date_from:%d.%m.%Y}-{job.date_to:%d.%m.%Y}.", [[("Статус выгрузки", "status")], [("Главное меню", "main")]])
         except ValueError as exc:
-            send_text(target, str(exc), main_buttons())
+            show_menu(target, str(exc), main_buttons())
     elif sess.step == "from":
         parsed = parse_ru_date(text)
         if not parsed:
-            send_text(target, "Не понял дату. Введите в формате ДД.ММ.ГГГГ, например 29.07.2026.")
+            show_menu(target, "Не понял дату. Введите в формате ДД.ММ.ГГГГ, например 29.07.2026.", [nav_buttons("period")])
             return
         sess.date_from = parsed
         sess.step = "to"
-        send_text(target, "Введите дату окончания в формате ДД.ММ.ГГГГ.")
+        show_menu(target, "Введите дату окончания в формате ДД.ММ.ГГГГ.", [nav_buttons("period")])
     elif sess.step == "to":
         parsed = parse_ru_date(text)
         if not parsed:
-            send_text(target, "Не понял дату. Введите в формате ДД.ММ.ГГГГ, например 29.07.2026.")
+            show_menu(target, "Не понял дату. Введите в формате ДД.ММ.ГГГГ, например 29.07.2026.", [nav_buttons("period")])
             return
         if sess.date_from and parsed < sess.date_from:
-            send_text(target, "Дата окончания не может быть раньше даты начала.")
+            show_menu(target, "Дата окончания не может быть раньше даты начала.", [nav_buttons("period")])
             return
         sess.date_to = parsed
         sess.step = "period_court"
-        send_text(target, "Выберите суд.", court_buttons("run"))
+        show_menu(target, "Выберите суд.", court_buttons("court"))
     else:
-        send_text(target, "Выберите действие.", main_buttons())
+        show_menu(target, "Выберите действие.", main_buttons())
 
 
 def poll() -> None:
