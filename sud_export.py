@@ -5,11 +5,10 @@ import argparse
 import csv
 import html
 import re
-import signal
+import subprocess
 import sys
 import textwrap
 import urllib.parse
-import urllib.request
 import zipfile
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -90,18 +89,14 @@ def iter_dates(start: date, end: date):
 def read_url(url: str, cache_path: Path, refresh: bool = False, timeout: int = 12) -> str:
     if cache_path.exists() and not refresh:
         return cache_path.read_text(encoding="utf-8", errors="replace")
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 sud-export/0.1"})
-    def stop(_signum, _frame):
-        raise TimeoutError(f"timeout after {timeout}s")
-
-    old_handler = signal.signal(signal.SIGALRM, stop)
-    signal.alarm(timeout)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read()
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
+    result = subprocess.run(
+        ["curl", "-L", "-sS", "--max-time", str(timeout), "-A", "Mozilla/5.0 sud-export/0.1", url],
+        capture_output=True,
+        timeout=timeout + 2,
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.decode("utf-8", errors="replace").strip() or f"curl failed: {result.returncode}")
+    raw = result.stdout
     text = raw.decode("utf-8", errors="replace")
     if text.count("�") > 10:
         text = raw.decode("windows-1251", errors="replace")
