@@ -29,6 +29,8 @@ COURTS = {
 }
 
 HEADERS = [
+    "Группа представителя",
+    "Кол-во дел у представителя",
     "Суд",
     "Дата заседания",
     "Время",
@@ -59,6 +61,8 @@ class Row:
 
     def cells(self) -> list[str]:
         return [
+            "",
+            "",
             self.court,
             self.hearing_date,
             self.time,
@@ -71,6 +75,34 @@ class Row:
             self.url,
             self.check,
         ]
+
+
+def lawyer_key(row: Row) -> str:
+    if not row.lawyers:
+        return "Без представителя"
+    first = row.lawyers.split(";")[0].strip()
+    return first.split(":", 1)[1].strip() if ":" in first else first
+
+
+def sort_by_lawyer(rows: list[Row]) -> list[list[str]]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = lawyer_key(row)
+        counts[key] = counts.get(key, 0) + 1
+
+    def key(row: Row):
+        group = lawyer_key(row)
+        no_lawyer = group == "Без представителя"
+        return (no_lawyer, -counts[group], group, row.hearing_date, row.time, row.case_number)
+
+    table_rows = []
+    for row in sorted(rows, key=key):
+        cells = row.cells()
+        group = lawyer_key(row)
+        cells[0] = group
+        cells[1] = str(counts[group])
+        table_rows.append(cells)
+    return table_rows
 
 
 def clean(text: str) -> str:
@@ -300,6 +332,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--outdir", default="output")
     p.add_argument("--court", action="append", choices=sorted(COURTS), help="limit to a court host; can be repeated")
     p.add_argument("--max-cases", type=int, help="stop enriching after this many rows; useful for smoke checks")
+    p.add_argument("--sort-by-lawyer", action="store_true")
     p.add_argument("--timeout", type=int, default=12)
     p.add_argument("--refresh", action="store_true")
     args = p.parse_args(argv)
@@ -307,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     end = datetime.strptime(args.date_to, "%Y-%m-%d").date()
     outdir = Path(args.outdir)
     rows, log = collect(start, end, outdir, args.refresh, set(args.court or []), args.timeout, args.max_cases)
-    table = [HEADERS] + [row.cells() for row in rows]
+    table = [HEADERS] + (sort_by_lawyer(rows) if args.sort_by_lawyer else [row.cells() for row in rows])
     write_xlsx(outdir / "report.xlsx", table)
     write_html(outdir / "report.html", table)
     write_pdf(outdir / "report.pdf", table)

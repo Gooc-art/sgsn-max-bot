@@ -19,6 +19,17 @@ class SudExportTest(unittest.TestCase):
         self.assertIn("Сидоров", lawyers)
         self.assertEqual(check, "ok")
 
+    def test_sort_by_lawyer_groups_by_count(self):
+        rows = [
+            s.Row("Суд", "2026-07-02", "10:00", "3", "", "", "", "ПРЕДСТАВИТЕЛЬ: Петров П.П.", "", "", "ok"),
+            s.Row("Суд", "2026-07-01", "10:00", "1", "", "", "", "ПРЕДСТАВИТЕЛЬ: Иванов И.И.", "", "", "ok"),
+            s.Row("Суд", "2026-07-03", "10:00", "4", "", "", "", "", "", "", "no_lawyer"),
+            s.Row("Суд", "2026-07-02", "09:00", "2", "", "", "", "ПРЕДСТАВИТЕЛЬ: Иванов И.И.", "", "", "ok"),
+        ]
+        table = s.sort_by_lawyer(rows)
+        self.assertEqual([r[0] for r in table], ["Иванов И.И.", "Иванов И.И.", "Петров П.П.", "Без представителя"])
+        self.assertEqual([r[1] for r in table], ["2", "2", "1", "1"])
+
 
 if __name__ == "__main__":
     unittest.main()

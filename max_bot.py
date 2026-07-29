@@ -200,6 +200,7 @@ def worker() -> None:
                 str(job.outdir),
                 "--timeout",
                 "8",
+                "--sort-by-lawyer",
             ]
             if job.court:
                 cmd += ["--court", job.court]
