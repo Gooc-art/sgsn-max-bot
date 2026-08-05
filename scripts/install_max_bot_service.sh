@@ -9,6 +9,7 @@ if [ ! -f "$env_file" ]; then
 MAX_TOKEN=
 MAX_API_BASE=https://platform-api2.max.ru
 SUD_MAX_DAYS=31
+SUD_EXPORT_TIMEOUT_SECONDS=14400
 EOF
   chmod 600 "$env_file"
 fi
