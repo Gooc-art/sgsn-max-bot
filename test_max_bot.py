@@ -101,6 +101,16 @@ class MaxBotTest(unittest.TestCase):
 
         self.assertEqual(calls, ["show", "ack"])
 
+    def test_new_period_clears_previous_court(self):
+        b.sessions.clear()
+        b.sessions["42"] = b.Session(court="salehardsky--ynao.sudrf.ru")
+
+        with mock.patch.object(b, "show_menu"):
+            with mock.patch.object(b, "ack_callback"):
+                b.handle({"user_id": 42}, "", "month", "cb1")
+
+        self.assertIsNone(b.sessions["42"].court)
+
     def test_answer_callback_uses_notification(self):
         with mock.patch.object(b, "request") as req:
             b.answer_callback("cb1", "OK")
