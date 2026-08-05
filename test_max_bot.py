@@ -9,6 +9,9 @@ class MaxBotTest(unittest.TestCase):
     def test_last_full_week(self):
         self.assertEqual(b.last_full_week(dt.date(2026, 7, 29)), (dt.date(2026, 7, 20), dt.date(2026, 7, 26)))
 
+    def test_last_full_month(self):
+        self.assertEqual(b.last_full_month(dt.date(2026, 7, 29)), (dt.date(2026, 6, 1), dt.date(2026, 6, 30)))
+
     def test_current_week(self):
         self.assertEqual(b.current_week(dt.date(2026, 7, 29)), (dt.date(2026, 7, 27), dt.date(2026, 8, 2)))
 
@@ -51,6 +54,24 @@ class MaxBotTest(unittest.TestCase):
         self.assertEqual(payload, "week")
         self.assertEqual(callback_id, "cb1")
 
+    def test_extract_callback_prefers_clicking_user_over_bot_sender(self):
+        target, text, payload, callback_id = b.extract_event(
+            {
+                "update_type": "message_callback",
+                "callback": {"callback_id": "cb1", "payload": "week", "user": {"user_id": 42}},
+                "message": {
+                    "sender": {"user_id": 1, "is_bot": True},
+                    "recipient": {"user_id": 42},
+                    "body": {"text": "old"},
+                },
+            }
+        )
+
+        self.assertEqual(target, {"user_id": 42})
+        self.assertEqual(text, "old")
+        self.assertEqual(payload, "week")
+        self.assertEqual(callback_id, "cb1")
+
     def test_extract_bot_started_as_start(self):
         target, text, payload, callback_id = b.extract_event(
             {"update_type": "bot_started", "chat_id": 7, "user": {"user_id": 42}}
@@ -66,9 +87,9 @@ class MaxBotTest(unittest.TestCase):
         shown = []
         with mock.patch.object(b, "ack_callback", side_effect=RuntimeError("answer failed")):
             with mock.patch.object(b, "show_menu", side_effect=lambda target, text, buttons: shown.append(text)):
-                b.handle({"user_id": 42}, "", "week", "cb1")
+                b.handle({"user_id": 42}, "", "month", "cb1")
 
-        self.assertEqual(b.sessions["42"].step, "week_court")
+        self.assertEqual(b.sessions["42"].step, "month_court")
         self.assertIn("Выберите суд", shown[-1])
 
     def test_callback_ack_happens_after_action(self):
@@ -76,7 +97,7 @@ class MaxBotTest(unittest.TestCase):
         calls = []
         with mock.patch.object(b, "show_menu", side_effect=lambda *args: calls.append("show")):
             with mock.patch.object(b, "ack_callback", side_effect=lambda callback_id: calls.append("ack")):
-                b.handle({"user_id": 42}, "", "week", "cb1")
+                b.handle({"user_id": 42}, "", "month", "cb1")
 
         self.assertEqual(calls, ["show", "ack"])
 
@@ -146,6 +167,35 @@ class MaxBotTest(unittest.TestCase):
         start_job.assert_not_called()
         self.assertEqual(b.sessions["42"].step, "period")
         self.assertEqual(shown[-1], "Сначала выберите период выгрузки.")
+
+    def test_worker_uses_configured_export_timeout(self):
+        class Queue:
+            def __init__(self, job):
+                self.job = job
+
+            def get(self):
+                if self.job:
+                    job, self.job = self.job, None
+                    return job
+                raise KeyboardInterrupt
+
+            def task_done(self):
+                pass
+
+        job = b.Job("j1", {"user_id": 42}, dt.date(2026, 1, 1), dt.date(2026, 1, 31), None, b.Path("out"))
+        old_timeout = b.EXPORT_TIMEOUT_SECONDS
+        b.EXPORT_TIMEOUT_SECONDS = 123
+        try:
+            with mock.patch.object(b, "job_queue", Queue(job)):
+                with mock.patch.object(b, "show_menu"):
+                    with mock.patch.object(b, "upload_and_send_file"):
+                        with mock.patch.object(b.subprocess, "run", return_value=mock.Mock(returncode=0, stdout="rows=0\n", stderr="")) as run:
+                            with self.assertRaises(KeyboardInterrupt):
+                                b.worker()
+        finally:
+            b.EXPORT_TIMEOUT_SECONDS = old_timeout
+
+        self.assertEqual(run.call_args.kwargs["timeout"], 123)
 
 
 if __name__ == "__main__":

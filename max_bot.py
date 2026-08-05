@@ -24,6 +24,7 @@ from sud_export import COURTS
 API_BASE = os.environ.get("MAX_API_BASE", "https://platform-api2.max.ru")
 TOKEN = os.environ.get("MAX_TOKEN", "")
 MAX_DAYS = int(os.environ.get("SUD_MAX_DAYS", "31"))
+EXPORT_TIMEOUT_SECONDS = int(os.environ.get("SUD_EXPORT_TIMEOUT_SECONDS", str(4 * 60 * 60)))
 
 
 @dataclass
@@ -171,7 +172,7 @@ def upload_and_send_file(target: dict, path: Path, caption: str) -> None:
 
 
 def main_buttons() -> list[list[tuple[str, str]]]:
-    return [[("📊 Выгрузка за неделю", "week")], [("📅 Выбрать период", "period"), ("📌 Статус выгрузки", "status")], [("❌ Отмена", "cancel")]]
+    return [[("📊 Выгрузка за месяц", "month")], [("📅 Выбрать период", "period"), ("📌 Статус выгрузки", "status")], [("❌ Отмена", "cancel")]]
 
 
 def nav_buttons(back: str = "main") -> list[tuple[str, str]]:
@@ -198,6 +199,12 @@ def last_full_week(today: date | None = None) -> tuple[date, date]:
     this_monday = today - timedelta(days=today.weekday())
     start = this_monday - timedelta(days=7)
     return start, start + timedelta(days=6)
+
+
+def last_full_month(today: date | None = None) -> tuple[date, date]:
+    first_this_month = (today or date.today()).replace(day=1)
+    end = first_this_month - timedelta(days=1)
+    return end.replace(day=1), end
 
 
 def current_week(today: date | None = None) -> tuple[date, date]:
@@ -271,7 +278,7 @@ def worker() -> None:
             ]
             if job.court:
                 cmd += ["--court", job.court]
-            result = subprocess.run(cmd, text=True, capture_output=True, timeout=60 * 60)
+            result = subprocess.run(cmd, text=True, capture_output=True, timeout=EXPORT_TIMEOUT_SECONDS)
             if result.returncode:
                 raise RuntimeError((result.stderr or result.stdout).strip())
             match = re.search(r"rows=(\d+)", result.stdout)
@@ -311,7 +318,7 @@ def extract_event(update: dict) -> tuple[dict, str, str, str]:
     payload = callback.get("payload") or ""
     callback_id = callback.get("callback_id") or ""
     chat = message.get("chat") or message.get("recipient") or callback.get("chat") or {}
-    user = message.get("sender") or message.get("user") or callback.get("user") or update.get("user") or {}
+    user = callback.get("user") or update.get("user") or message.get("sender") or message.get("user") or {}
     target = {}
     chat_id = chat.get("chat_id") or message.get("chat_id") or callback.get("chat_id") or update.get("chat_id")
     user_id = user.get("user_id") or message.get("user_id") or callback.get("user_id") or update.get("user_id")
@@ -332,6 +339,10 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
     if action in {"/start", "start", "Старт", "main"}:
         sess.step = ""
         show_menu(target, "Бот делает выгрузку судебных дел ЯНАО в Excel/PDF/CSV.", main_buttons())
+    elif action in {"/month", "month"}:
+        sess.date_from, sess.date_to = last_full_month()
+        sess.step = "month_court"
+        show_menu(target, f"Период: {sess.date_from:%d.%m.%Y}-{sess.date_to:%d.%m.%Y}. Выберите суд.", court_buttons("court"))
     elif action in {"/week", "week"}:
         sess.date_from, sess.date_to = last_full_week()
         sess.step = "week_court"
