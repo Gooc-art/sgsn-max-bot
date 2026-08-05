@@ -85,6 +85,14 @@ def lawyer_key(row: Row) -> str:
     return first.split(":", 1)[1].strip() if ":" in first else first
 
 
+def is_ufns_defendant(row: Row) -> bool:
+    for party in row.parties.split(";"):
+        role, _, name = party.partition(":")
+        if "ответчик" in role.lower() and re.search(r"\bуфнс\b|управление федеральной налоговой службы", name, flags=re.I):
+            return True
+    return False
+
+
 def sort_by_lawyer(rows: list[Row]) -> list[list[str]]:
     counts: dict[str, int] = {}
     for row in rows:
@@ -259,25 +267,38 @@ def col_name(n: int) -> str:
     return name
 
 
-def write_xlsx(path: Path, rows: list[list[str]]) -> None:
+def write_xlsx(path: Path, rows: list[list[str]], extra_sheets: list[tuple[str, list[list[str]]]] | None = None) -> None:
     widths = [28, 12, 28, 13, 24, 45, 24, 90, 28, 90, 90, 28, 55, 16]
-    row_xmls = []
-    for r, row in enumerate(rows, 1):
-        cells = []
-        for c, value in enumerate(row, 1):
-            ref = f"{col_name(c)}{r}"
-            style = 2 if r == 1 else 1
-            cells.append(f'<c r="{ref}" s="{style}" t="inlineStr"><is><t>{escape(value or "")}</t></is></c>')
-        height = ' ht="36" customHeight="1"' if r == 1 else ' ht="54" customHeight="1"'
-        row_xmls.append(f'<row r="{r}"{height}>{"".join(cells)}</row>')
-    cols = "".join(f'<col min="{i}" max="{i}" width="{width}" customWidth="1"/>' for i, width in enumerate(widths, 1))
-    last_ref = f"{col_name(len(HEADERS))}{len(rows)}"
-    sheet = f'''<?xml version="1.0" encoding="UTF-8"?>
+
+    def sheet_xml(sheet_rows: list[list[str]]) -> str:
+        row_xmls = []
+        for r, row in enumerate(sheet_rows, 1):
+            cells = []
+            for c, value in enumerate(row, 1):
+                ref = f"{col_name(c)}{r}"
+                style = 2 if r == 1 else 1
+                cells.append(f'<c r="{ref}" s="{style}" t="inlineStr"><is><t>{escape(value or "")}</t></is></c>')
+            height = ' ht="36" customHeight="1"' if r == 1 else ' ht="54" customHeight="1"'
+            row_xmls.append(f'<row r="{r}"{height}>{"".join(cells)}</row>')
+        cols = "".join(f'<col min="{i}" max="{i}" width="{width}" customWidth="1"/>' for i, width in enumerate(widths, 1))
+        last_ref = f"{col_name(len(HEADERS))}{len(sheet_rows)}"
+        return f'''<?xml version="1.0" encoding="UTF-8"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
 <sheetFormatPr defaultRowHeight="54"/><cols>{cols}</cols><sheetData>{''.join(row_xmls)}</sheetData>
 <autoFilter ref="A1:{last_ref}"/><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>
 </worksheet>'''
+
+    sheets = [("Report", rows), *(extra_sheets or [])]
+    workbook_sheets = "".join(f'<sheet name="{escape(name)}" sheetId="{i}" r:id="rId{i}"/>' for i, (name, _) in enumerate(sheets, 1))
+    workbook_rels = "".join(
+        f'<Relationship Id="rId{i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{i}.xml"/>'
+        for i in range(1, len(sheets) + 1)
+    )
+    content_overrides = "".join(
+        f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        for i in range(1, len(sheets) + 1)
+    )
     styles = '''<?xml version="1.0" encoding="UTF-8"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts>
@@ -289,12 +310,13 @@ def write_xlsx(path: Path, rows: list[list[str]]) -> None:
 </styleSheet>'''
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
+        z.writestr("[Content_Types].xml", f'<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>{content_overrides}</Types>')
         z.writestr("_rels/.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
-        z.writestr("xl/workbook.xml", '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets></workbook>')
-        z.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')
+        z.writestr("xl/workbook.xml", f'<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>{workbook_sheets}</sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels", f'<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{workbook_rels}<Relationship Id="rId{len(sheets)+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')
         z.writestr("xl/styles.xml", styles)
-        z.writestr("xl/worksheets/sheet1.xml", sheet)
+        for i, (_, sheet_rows) in enumerate(sheets, 1):
+            z.writestr(f"xl/worksheets/sheet{i}.xml", sheet_xml(sheet_rows))
 
 
 def write_html(path: Path, rows: list[list[str]]) -> None:
@@ -378,14 +400,15 @@ def main(argv: list[str] | None = None) -> int:
     outdir = Path(args.outdir)
     rows, log = collect(start, end, outdir, args.refresh, set(args.court or []), args.timeout, args.max_cases)
     table = [HEADERS] + (sort_by_lawyer(rows) if args.sort_by_lawyer else [row.cells() for row in rows])
-    write_xlsx(outdir / "report.xlsx", table)
+    ufns_table = [HEADERS] + [row.cells() for row in rows if is_ufns_defendant(row)]
+    write_xlsx(outdir / "report.xlsx", table, [("УФНС ответчик", ufns_table)])
     html_path = outdir / "report.html"
     write_html(html_path, table)
     write_pdf(outdir / "report.pdf", table, html_path)
     write_csv(outdir / "report.csv", table)
     write_csv(outdir / "run_log.csv", [["Суд", "Дата", "URL", "Ошибка", "Детали"], *log])
     print(f"rows={len(rows)} xlsx={outdir / 'report.xlsx'} pdf={outdir / 'report.pdf'} log={outdir / 'run_log.csv'}")
-    return 0
+    return 2 if not rows and log else 0
 
 
 if __name__ == "__main__":

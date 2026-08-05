@@ -1,5 +1,7 @@
 import datetime as dt
+import tempfile
 import unittest
+import zipfile
 
 import sud_export as s
 
@@ -29,6 +31,26 @@ class SudExportTest(unittest.TestCase):
         table = s.sort_by_lawyer(rows)
         self.assertEqual([r[0] for r in table], ["Иванов И.И.", "Иванов И.И.", "Петров П.П.", "Без представителя"])
         self.assertEqual([r[1] for r in table], ["2", "2", "1", "1"])
+
+    def test_is_ufns_defendant_matches_defendant_only(self):
+        defendant = s.Row("Суд", "2026-07-01", "", "1", "", "", "Ответчик: УФНС России по ЯНАО", "", "", "", "")
+        long_name = s.Row("Суд", "2026-07-01", "", "2", "", "", "Административный ответчик: Управление Федеральной налоговой службы по ЯНАО", "", "", "", "")
+        claimant = s.Row("Суд", "2026-07-01", "", "3", "", "", "Истец: УФНС России по ЯНАО; Ответчик: Иванов", "", "", "", "")
+
+        self.assertTrue(s.is_ufns_defendant(defendant))
+        self.assertTrue(s.is_ufns_defendant(long_name))
+        self.assertFalse(s.is_ufns_defendant(claimant))
+
+    def test_write_xlsx_adds_ufns_sheet(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = s.Path(tmp) / "report.xlsx"
+            s.write_xlsx(path, [s.HEADERS], [("УФНС ответчик", [s.HEADERS])])
+
+            with zipfile.ZipFile(path) as z:
+                self.assertIn("xl/worksheets/sheet2.xml", z.namelist())
+                workbook = z.read("xl/workbook.xml").decode()
+
+        self.assertIn("УФНС ответчик", workbook)
 
 
 if __name__ == "__main__":

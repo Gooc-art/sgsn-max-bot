@@ -168,6 +168,27 @@ class MaxBotTest(unittest.TestCase):
         self.assertEqual(b.sessions["42"].step, "period")
         self.assertEqual(shown[-1], "Сначала выберите период выгрузки.")
 
+    def test_start_job_allows_45_days(self):
+        b.sessions.clear()
+        target = {"user_id": 42}
+        start = dt.date(2026, 1, 1)
+        old_max_days = b.MAX_DAYS
+        b.MAX_DAYS = 45
+        try:
+            job = b.start_job(target, start, start + dt.timedelta(days=44), None)
+            with self.assertRaises(ValueError):
+                b.start_job(target, start, start + dt.timedelta(days=45), None)
+        finally:
+            b.MAX_DAYS = old_max_days
+            b.jobs.pop(job.id, None)
+
+        self.assertEqual(job.date_to, dt.date(2026, 2, 14))
+
+    def test_done_message_mentions_future_empty_period(self):
+        job = b.Job("j1", {"user_id": 42}, dt.date.today(), dt.date.today() + dt.timedelta(days=1), None, b.Path("out"))
+
+        self.assertIn("расписание могло быть еще не опубликовано", b.done_message(job))
+
     def test_worker_uses_configured_export_timeout(self):
         class Queue:
             def __init__(self, job):
@@ -196,6 +217,35 @@ class MaxBotTest(unittest.TestCase):
             b.EXPORT_TIMEOUT_SECONDS = old_timeout
 
         self.assertEqual(run.call_args.kwargs["timeout"], 123)
+
+    def test_worker_uses_configured_http_timeout(self):
+        class Queue:
+            def __init__(self, job):
+                self.job = job
+
+            def get(self):
+                if self.job:
+                    job, self.job = self.job, None
+                    return job
+                raise KeyboardInterrupt
+
+            def task_done(self):
+                pass
+
+        job = b.Job("j1", {"user_id": 42}, dt.date(2026, 1, 1), dt.date(2026, 1, 31), None, b.Path("out"))
+        old_http_timeout = b.HTTP_TIMEOUT_SECONDS
+        b.HTTP_TIMEOUT_SECONDS = 25
+        try:
+            with mock.patch.object(b, "job_queue", Queue(job)):
+                with mock.patch.object(b, "show_menu"):
+                    with mock.patch.object(b, "upload_and_send_file"):
+                        with mock.patch.object(b.subprocess, "run", return_value=mock.Mock(returncode=0, stdout="rows=0\n", stderr="")) as run:
+                            with self.assertRaises(KeyboardInterrupt):
+                                b.worker()
+        finally:
+            b.HTTP_TIMEOUT_SECONDS = old_http_timeout
+
+        self.assertIn("25", run.call_args.args[0])
 
 
 if __name__ == "__main__":

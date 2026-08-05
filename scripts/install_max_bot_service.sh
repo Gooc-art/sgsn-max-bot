@@ -8,8 +8,9 @@ if [ ! -f "$env_file" ]; then
   cat > "$env_file" <<'EOF'
 MAX_TOKEN=
 MAX_API_BASE=https://platform-api2.max.ru
-SUD_MAX_DAYS=31
+SUD_MAX_DAYS=45
 SUD_EXPORT_TIMEOUT_SECONDS=14400
+SUD_HTTP_TIMEOUT_SECONDS=20
 EOF
   chmod 600 "$env_file"
 fi

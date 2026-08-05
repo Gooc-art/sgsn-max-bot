@@ -23,8 +23,9 @@ from sud_export import COURTS
 
 API_BASE = os.environ.get("MAX_API_BASE", "https://platform-api2.max.ru")
 TOKEN = os.environ.get("MAX_TOKEN", "")
-MAX_DAYS = int(os.environ.get("SUD_MAX_DAYS", "31"))
+MAX_DAYS = int(os.environ.get("SUD_MAX_DAYS", "45"))
 EXPORT_TIMEOUT_SECONDS = int(os.environ.get("SUD_EXPORT_TIMEOUT_SECONDS", str(4 * 60 * 60)))
+HTTP_TIMEOUT_SECONDS = int(os.environ.get("SUD_HTTP_TIMEOUT_SECONDS", "20"))
 
 
 @dataclass
@@ -258,6 +259,13 @@ def show_confirm(target: dict, sess: Session) -> None:
     )
 
 
+def done_message(job: Job) -> str:
+    text = f"Готово. Найдено записей: {job.rows}."
+    if job.rows == 0 and job.date_to > date.today():
+        text += " Часть периода в будущем, расписание могло быть еще не опубликовано."
+    return text + " Отправляю файлы."
+
+
 def worker() -> None:
     while True:
         job = job_queue.get()
@@ -273,7 +281,7 @@ def worker() -> None:
                 "--outdir",
                 str(job.outdir),
                 "--timeout",
-                "8",
+                str(HTTP_TIMEOUT_SECONDS),
                 "--sort-by-lawyer",
             ]
             if job.court:
@@ -284,7 +292,7 @@ def worker() -> None:
             match = re.search(r"rows=(\d+)", result.stdout)
             job.rows = int(match.group(1)) if match else rows_count(job.outdir / "report.csv")
             job.status = "done"
-            show_menu(job.target, f"Готово. Найдено записей: {job.rows}. Отправляю файлы.", [[("Новая выгрузка", "period")], [("Главное меню", "main")]])
+            show_menu(job.target, done_message(job), [[("Новая выгрузка", "period")], [("Главное меню", "main")]])
             for name, caption in (
                 ("report.xlsx", "Excel-отчет"),
                 ("report.pdf", "PDF-версия"),
