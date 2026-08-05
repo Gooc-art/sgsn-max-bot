@@ -85,10 +85,9 @@ def lawyer_key(row: Row) -> str:
     return first.split(":", 1)[1].strip() if ":" in first else first
 
 
-def is_ufns_defendant(row: Row) -> bool:
+def is_tax_party(row: Row) -> bool:
     for party in row.parties.split(";"):
-        role, _, name = party.partition(":")
-        if "ответчик" in role.lower() and re.search(r"\bуфнс\b|управление федеральной налоговой службы", name, flags=re.I):
+        if re.search(r"\b[уи]?фнс\b|федеральн\w+ налогов\w+ служб\w+|налогов\w+ инспекц", party, flags=re.I):
             return True
     return False
 
@@ -400,8 +399,8 @@ def main(argv: list[str] | None = None) -> int:
     outdir = Path(args.outdir)
     rows, log = collect(start, end, outdir, args.refresh, set(args.court or []), args.timeout, args.max_cases)
     table = [HEADERS] + (sort_by_lawyer(rows) if args.sort_by_lawyer else [row.cells() for row in rows])
-    ufns_table = [HEADERS] + [row.cells() for row in rows if is_ufns_defendant(row)]
-    write_xlsx(outdir / "report.xlsx", table, [("УФНС ответчик", ufns_table)])
+    tax_table = [HEADERS] + [row.cells() for row in rows if is_tax_party(row)]
+    write_xlsx(outdir / "report.xlsx", table, [("ФНС участвует", tax_table)])
     html_path = outdir / "report.html"
     write_html(html_path, table)
     write_pdf(outdir / "report.pdf", table, html_path)
