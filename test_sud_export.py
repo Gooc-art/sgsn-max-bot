@@ -7,6 +7,12 @@ import sud_export as s
 
 
 class SudExportTest(unittest.TestCase):
+    def test_ynao_courts_include_requested_districts(self):
+        self.assertEqual(s.COURTS["gubkinskiy--ynao.sudrf.ru"], "Губкинский районный суд")
+        self.assertEqual(s.COURTS["purovsky--ynao.sudrf.ru"], "Пуровский районный суд")
+        self.assertEqual(s.COURTS["krasnoselkupsky--ynao.sudrf.ru"], "Красноселькупский районный суд")
+        self.assertEqual(s.COURTS["shuryshkarsky--ynao.sudrf.ru"], "Шурышкарский районный суд")
+
     def test_parse_schedule_and_case(self):
         schedule = """
         <table><tr><td>1</td><td><a href="/modules.php?name=sud_delo&name_op=case&case_id=1">2-1/2026</a></td>

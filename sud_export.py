@@ -24,8 +24,12 @@ COURTS = {
     "nadymsky--ynao.sudrf.ru": "Надымский городской суд",
     "novourengoysky--ynao.sudrf.ru": "Новый Уренгойский городской суд",
     "muravlenkovsky--ynao.sudrf.ru": "Муравленковский городской суд",
+    "gubkinskiy--ynao.sudrf.ru": "Губкинский районный суд",
+    "purovsky--ynao.sudrf.ru": "Пуровский районный суд",
     "tazovsky--ynao.sudrf.ru": "Тазовский районный суд",
     "yamalsky--ynao.sudrf.ru": "Ямальский районный суд",
+    "krasnoselkupsky--ynao.sudrf.ru": "Красноселькупский районный суд",
+    "shuryshkarsky--ynao.sudrf.ru": "Шурышкарский районный суд",
     "labytnangsky.ynao.sudrf.ru": "Лабытнангский городской суд",
 }
 
