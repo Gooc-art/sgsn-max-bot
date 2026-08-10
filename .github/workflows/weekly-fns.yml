@@ -30,4 +30,4 @@ jobs:
           if [ "${{ github.event.inputs.force_send }}" = "true" ]; then
             args=--force-send
           fi
-          flock -n /tmp/sud_weekly_fns.lock timeout 75m python3 weekly_fns_notify.py $args
+          flock -n /tmp/sud_weekly_fns.lock timeout 75m python3 weekly_fns_notify.py --timeout 8 $args

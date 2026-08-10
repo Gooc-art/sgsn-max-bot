@@ -27,7 +27,7 @@ After=network-online.target
 Type=oneshot
 WorkingDirectory=$HOME/sud-app
 EnvironmentFile=$env_file
-ExecStart=/usr/bin/python3 $HOME/sud-app/weekly_fns_notify.py
+ExecStart=/usr/bin/python3 $HOME/sud-app/weekly_fns_notify.py --timeout 8
 EOF
 
 cat > "$HOME/.config/systemd/user/sud-weekly-fns.timer" <<'EOF'
