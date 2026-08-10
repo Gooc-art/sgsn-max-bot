@@ -108,6 +108,13 @@ cd ~/sud-app
 ./scripts/install_max_bot_service.sh
 ```
 
+Установка воскресной ночной проверки ФНС:
+
+```bash
+cd ~/sud-app
+./scripts/install_weekly_fns_timer.sh
+```
+
 Токен хранится вне репозитория:
 
 ```bash
@@ -118,7 +125,16 @@ systemctl --user restart sud-max-bot.service
 Команды бота:
 
 - `/start` — главное меню.
+- `/month` — выгрузка за прошлый полный месяц.
 - `/week` — выгрузка за прошлую полную неделю.
 - `/period` — выбор периода.
 - `/status` — статус последней задачи.
 - `/cancel` — отмена ввода.
+
+Автоуведомление по ФНС:
+
+```bash
+./scripts/install_weekly_fns_timer.sh
+```
+
+Таймер или workflow `weekly-fns` запускает сбор на следующую неделю в воскресенье ночью и шлет `report.xlsx` в `SUD_WEEKLY_CHAT_ID`, если ФНС найдена.

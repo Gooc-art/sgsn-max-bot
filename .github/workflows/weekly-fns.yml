@@ -1,0 +1,33 @@
+name: weekly-fns
+
+on:
+  schedule:
+    - cron: "0 1 * * 0"
+  workflow_dispatch:
+    inputs:
+      force_send:
+        description: Send test message/file even when FNS rows are 0
+        required: false
+        default: "false"
+
+jobs:
+  weekly-fns:
+    runs-on: self-hosted
+    timeout-minutes: 90
+    steps:
+      - name: Update app
+        run: |
+          git -C "$HOME/sud-app" fetch origin main
+          git -C "$HOME/sud-app" reset --hard origin/main
+          chmod +x "$HOME/sud-app/weekly_fns_notify.py"
+      - name: Run weekly FNS notification
+        run: |
+          cd "$HOME/sud-app"
+          set -a
+          . "$HOME/.config/sud/max-bot.env"
+          set +a
+          args=
+          if [ "${{ github.event.inputs.force_send }}" = "true" ]; then
+            args=--force-send
+          fi
+          flock -n /tmp/sud_weekly_fns.lock timeout 75m python3 weekly_fns_notify.py $args
