@@ -26,6 +26,7 @@ TOKEN = os.environ.get("MAX_TOKEN", "")
 MAX_DAYS = int(os.environ.get("SUD_MAX_DAYS", "45"))
 EXPORT_TIMEOUT_SECONDS = int(os.environ.get("SUD_EXPORT_TIMEOUT_SECONDS", str(4 * 60 * 60)))
 HTTP_TIMEOUT_SECONDS = int(os.environ.get("SUD_HTTP_TIMEOUT_SECONDS", "20"))
+WEEKLY_CHAT_ID_FILE = Path(os.environ.get("SUD_WEEKLY_CHAT_ID_FILE", "~/.config/sud/weekly-chat-id")).expanduser()
 
 
 @dataclass
@@ -259,6 +260,15 @@ def show_confirm(target: dict, sess: Session) -> None:
     )
 
 
+def save_weekly_chat(target: dict) -> bool:
+    chat_id = target.get("chat_id")
+    if not chat_id:
+        return False
+    WEEKLY_CHAT_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
+    WEEKLY_CHAT_ID_FILE.write_text(str(chat_id), encoding="utf-8")
+    return True
+
+
 def done_message(job: Job) -> str:
     text = f"Готово. Суд: {court_name(job.court)}. Найдено записей: {job.rows}."
     if job.rows == 0 and job.date_to > date.today():
@@ -375,6 +385,11 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
             show_menu(target, "Задач пока нет.", [[("🔄 Обновить статус", "status")], [("🏠 Главное меню", "main")]])
         else:
             show_menu(target, f"Последняя задача: {job.status}. Суд: {court_name(job.court)}. Записей: {job.rows}. Ошибка: {job.error or '-'}", [[("🔄 Обновить статус", "status")], [("🏠 Главное меню", "main")]])
+    elif action == "/weekly_here":
+        if save_weekly_chat(target):
+            show_menu(target, "Этот чат сохранен для воскресных уведомлений по ФНС.", main_buttons())
+        else:
+            show_menu(target, "Команду нужно отправить в групповом чате.", main_buttons())
     elif action in {"cancel", "/cancel"}:
         sess.step = ""
         show_menu(target, "Отменено.", main_buttons())

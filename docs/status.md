@@ -162,6 +162,7 @@ systemctl --user status sud-max-bot.service
 - `/week`
 - `/period`
 - `/status`
+- `/weekly_here`
 - `/cancel`
 
 Бот запускает выгрузки с `--sort-by-lawyer`.

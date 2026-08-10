@@ -22,6 +22,16 @@ class WeeklyFnsNotifyTest(unittest.TestCase):
 
             self.assertEqual(len(w.tax_rows(path)), 1)
 
+    def test_weekly_chat_id_uses_file_when_env_is_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_file = w.CHAT_ID_FILE
+            w.CHAT_ID_FILE = w.Path(tmp) / "weekly-chat-id"
+            w.CHAT_ID_FILE.write_text("777\n", encoding="utf-8")
+            try:
+                self.assertEqual(w.weekly_chat_id(), "777")
+            finally:
+                w.CHAT_ID_FILE = old_file
+
 
 if __name__ == "__main__":
     unittest.main()

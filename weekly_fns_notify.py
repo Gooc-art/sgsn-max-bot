@@ -14,6 +14,9 @@ import max_bot
 from sud_export import Row, is_tax_party
 
 
+CHAT_ID_FILE = Path(os.environ.get("SUD_WEEKLY_CHAT_ID_FILE", "~/.config/sud/weekly-chat-id")).expanduser()
+
+
 def next_week(today: date | None = None) -> tuple[date, date]:
     today = today or date.today()
     start = today - timedelta(days=today.weekday()) + timedelta(days=7)
@@ -64,6 +67,15 @@ def notify(chat_id: str, start: date, end: date, outdir: Path, count: int, force
     max_bot.upload_and_send_file(target, outdir / "report.xlsx", "Excel-отчет")
 
 
+def weekly_chat_id() -> str:
+    env_chat_id = os.environ.get("SUD_WEEKLY_CHAT_ID", "").strip()
+    if env_chat_id:
+        return env_chat_id
+    if CHAT_ID_FILE.exists():
+        return CHAT_ID_FILE.read_text(encoding="utf-8").strip()
+    return ""
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", help="today override, YYYY-MM-DD")
@@ -81,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     found = tax_rows(outdir / "report.csv")
     print(f"tax_rows={len(found)} xlsx={outdir / 'report.xlsx'}")
 
-    chat_id = os.environ.get("SUD_WEEKLY_CHAT_ID", "")
+    chat_id = weekly_chat_id()
     if (found or args.force_send) and not args.no_send:
         if not re.fullmatch(r"-?\d+", chat_id):
             raise RuntimeError("SUD_WEEKLY_CHAT_ID is not set")
