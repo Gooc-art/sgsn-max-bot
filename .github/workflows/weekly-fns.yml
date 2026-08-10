@@ -9,6 +9,14 @@ on:
         description: Send test message/file even when FNS rows are 0
         required: false
         default: "false"
+      skip_export:
+        description: Send from existing outdir without rebuilding
+        required: false
+        default: "false"
+      outdir:
+        description: Existing output directory
+        required: false
+        default: ""
 
 jobs:
   weekly-fns:
@@ -29,5 +37,11 @@ jobs:
           args=
           if [ "${{ github.event.inputs.force_send }}" = "true" ]; then
             args=--force-send
+          fi
+          if [ "${{ github.event.inputs.skip_export }}" = "true" ]; then
+            args="$args --skip-export"
+          fi
+          if [ -n "${{ github.event.inputs.outdir }}" ]; then
+            args="$args --outdir ${{ github.event.inputs.outdir }}"
           fi
           flock -n /tmp/sud_weekly_fns.lock timeout 75m python3 weekly_fns_notify.py --timeout 8 $args

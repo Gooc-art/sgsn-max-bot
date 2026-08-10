@@ -83,13 +83,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=int, default=int(os.environ.get("SUD_HTTP_TIMEOUT_SECONDS", "20")))
     parser.add_argument("--no-send", action="store_true")
     parser.add_argument("--force-send", action="store_true")
+    parser.add_argument("--skip-export", action="store_true")
     args = parser.parse_args(argv)
 
     today = datetime.strptime(args.date, "%Y-%m-%d").date() if args.date else None
     start, end = next_week(today)
     outdir = Path(args.outdir or f"output/weekly-fns/{start.isoformat()}")
 
-    run_export(start, end, outdir, args.timeout)
+    if not args.skip_export:
+        run_export(start, end, outdir, args.timeout)
     found = tax_rows(outdir / "report.csv")
     print(f"tax_rows={len(found)} xlsx={outdir / 'report.xlsx'}")
 
