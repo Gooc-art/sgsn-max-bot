@@ -92,7 +92,7 @@ def lawyer_key(row: Row) -> str:
 def is_sgsn_party(row: Row) -> bool:
     for party in row.parties.split(";"):
         if re.search(
-            r"\bсгсн\b|строительн\w+ надзор|государственн\w+ строительн\w+ надзор|служб\w+ государственн\w+ строительн\w+ надзор",
+            r"\bс\.?\s*г\.?\s*с\.?\s*н\.?\b|\bг\.?\s*с\.?\s*н\.?\b|служб\w+\s+гсн|служб\w+ государственн\w+ строительн\w+ надзор",
             party,
             flags=re.I,
         ):

@@ -40,13 +40,17 @@ class SudExportTest(unittest.TestCase):
 
     def test_is_sgsn_party_matches_any_role(self):
         defendant = s.Row("Суд", "2026-07-01", "", "1", "", "", "Ответчик: СГСН ЯНАО", "", "", "", "")
-        long_name = s.Row("Суд", "2026-07-01", "", "2", "", "", "Административный ответчик: Служба государственного строительного надзора ЯНАО", "", "", "", "")
-        claimant = s.Row("Суд", "2026-07-01", "", "3", "", "", "Истец: Департамент строительного надзора; Ответчик: Иванов", "", "", "", "")
-        unrelated = s.Row("Суд", "2026-07-01", "", "4", "", "", "Истец: Иванов; Ответчик: Петров", "", "", "", "")
+        long_name = s.Row("Суд", "2026-07-01", "", "2", "", "", "Административный ответчик: Служба государственного строительного надзора Ямало-Ненецкого автономного округа", "", "", "", "")
+        dotted_name = s.Row("Суд", "2026-07-01", "", "3", "", "", "Истец: С.Г.С.Н. ЯНАО; Ответчик: Иванов", "", "", "", "")
+        short_name = s.Row("Суд", "2026-07-01", "", "4", "", "", "Истец: служба ГСН ЯНАО; Ответчик: Иванов", "", "", "", "")
+        shorter_name = s.Row("Суд", "2026-07-01", "", "5", "", "", "Истец: ГСН ЯНАО; Ответчик: Иванов", "", "", "", "")
+        unrelated = s.Row("Суд", "2026-07-01", "", "6", "", "", "Истец: Департамент строительного надзора; Ответчик: Петров", "", "", "", "")
 
         self.assertTrue(s.is_sgsn_party(defendant))
         self.assertTrue(s.is_sgsn_party(long_name))
-        self.assertTrue(s.is_sgsn_party(claimant))
+        self.assertTrue(s.is_sgsn_party(dotted_name))
+        self.assertTrue(s.is_sgsn_party(short_name))
+        self.assertTrue(s.is_sgsn_party(shorter_name))
         self.assertFalse(s.is_sgsn_party(unrelated))
 
     def test_write_xlsx_adds_sgsn_sheet(self):
