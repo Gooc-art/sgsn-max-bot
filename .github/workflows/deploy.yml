@@ -9,14 +9,12 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy over SSH
+      - name: Deploy locally
         run: |
-          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
-            set -eu
-            if [ ! -d "$HOME/sgsn-max-bot/.git" ]; then
-              git clone https://github.com/Gooc-art/sgsn-max-bot.git "$HOME/sgsn-max-bot"
-            fi
-            git -C "$HOME/sgsn-max-bot" fetch origin main
-            git -C "$HOME/sgsn-max-bot" reset --hard origin/main
-            chmod +x "$HOME/sgsn-max-bot/sud_export.py" "$HOME/sgsn-max-bot/weekly_sgsn_notify.py"
-          '
+          set -eu
+          if [ ! -d "$HOME/sgsn-max-bot/.git" ]; then
+            git clone https://github.com/Gooc-art/sgsn-max-bot.git "$HOME/sgsn-max-bot"
+          fi
+          git -C "$HOME/sgsn-max-bot" fetch origin main
+          git -C "$HOME/sgsn-max-bot" reset --hard origin/main
+          chmod +x "$HOME/sgsn-max-bot/sud_export.py" "$HOME/sgsn-max-bot/weekly_sgsn_notify.py"

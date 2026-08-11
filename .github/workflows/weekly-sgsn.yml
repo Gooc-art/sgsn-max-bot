@@ -25,12 +25,10 @@ jobs:
     steps:
       - name: Update app
         run: |
-          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
-            set -eu
-            git -C "$HOME/sgsn-max-bot" fetch origin main
-            git -C "$HOME/sgsn-max-bot" reset --hard origin/main
-            chmod +x "$HOME/sgsn-max-bot/weekly_sgsn_notify.py"
-          '
+          set -eu
+          git -C "$HOME/sgsn-max-bot" fetch origin main
+          git -C "$HOME/sgsn-max-bot" reset --hard origin/main
+          chmod +x "$HOME/sgsn-max-bot/weekly_sgsn_notify.py"
       - name: Run weekly SGSN notification
         run: |
           args=
@@ -43,11 +41,9 @@ jobs:
           if [ -n "${{ github.event.inputs.outdir }}" ]; then
             args="$args --outdir ${{ github.event.inputs.outdir }}"
           fi
-          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 "
-            set -eu
-            cd \"\$HOME/sgsn-max-bot\"
-            set -a
-            . \"\$HOME/.config/sgsn-max-bot/max-bot.env\"
-            set +a
-            flock -n /tmp/sgsn_weekly.lock timeout 75m python3 weekly_sgsn_notify.py --timeout 8 $args
-          "
+          set -eu
+          cd "$HOME/sgsn-max-bot"
+          set -a
+          . "$HOME/.config/sgsn-max-bot/max-bot.env"
+          set +a
+          flock -n /tmp/sgsn_weekly.lock timeout 75m python3 weekly_sgsn_notify.py --timeout 8 $args

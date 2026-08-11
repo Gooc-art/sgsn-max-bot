@@ -21,25 +21,21 @@ jobs:
     steps:
       - name: Update app
         run: |
-          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
-            set -eu
-            git -C "$HOME/sgsn-max-bot" fetch origin main
-            git -C "$HOME/sgsn-max-bot" reset --hard origin/main
-          '
+          set -eu
+          git -C "$HOME/sgsn-max-bot" fetch origin main
+          git -C "$HOME/sgsn-max-bot" reset --hard origin/main
       - name: Run export
         run: |
-          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
-            set -eu
-            cd "$HOME/sgsn-max-bot"
-            mkdir -p "${{ inputs.outdir }}"
-            flock -n /tmp/sgsn_export.lock timeout 75m \
+          set -eu
+          cd "$HOME/sgsn-max-bot"
+          mkdir -p "${{ inputs.outdir }}"
+          flock -n /tmp/sgsn_export.lock timeout 75m \
             python3 sud_export.py \
               --from "${{ inputs.date_from }}" \
               --to "${{ inputs.date_to }}" \
               --outdir "${{ inputs.outdir }}" \
               --timeout 8 \
               --sort-by-lawyer
-          '
       - name: Show result
         run: |
-          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 'ls -lh "$HOME/sgsn-max-bot/${{ inputs.outdir }}"'
+          ls -lh "$HOME/sgsn-max-bot/${{ inputs.outdir }}"
