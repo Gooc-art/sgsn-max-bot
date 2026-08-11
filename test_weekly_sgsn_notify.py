@@ -3,24 +3,24 @@ import csv
 import tempfile
 import unittest
 
-import weekly_fns_notify as w
+import weekly_sgsn_notify as w
 
 
-class WeeklyFnsNotifyTest(unittest.TestCase):
+class WeeklySgsnNotifyTest(unittest.TestCase):
     def test_next_week(self):
         self.assertEqual(w.next_week(dt.date(2026, 8, 10)), (dt.date(2026, 8, 17), dt.date(2026, 8, 23)))
         self.assertEqual(w.next_week(dt.date(2026, 8, 16)), (dt.date(2026, 8, 17), dt.date(2026, 8, 23)))
 
-    def test_tax_rows_reads_export_csv(self):
+    def test_sgsn_rows_reads_export_csv(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = w.Path(tmp) / "report.csv"
             with path.open("w", encoding="utf-8-sig", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(["Группа", "Кол-во", "Суд", "Дата", "Время", "Номер", "Категория", "Судья", "Стороны", "Представители", "Результат", "Ссылка", "Статус"])
                 writer.writerow(["", "", "Суд", "2026-08-17", "10:00", "1", "", "", "Истец: Иванов", "", "", "", ""])
-                writer.writerow(["", "", "Суд", "2026-08-17", "11:00", "2", "", "", "Ответчик: УФНС России по ЯНАО", "", "", "", ""])
+                writer.writerow(["", "", "Суд", "2026-08-17", "11:00", "2", "", "", "Ответчик: Служба государственного строительного надзора ЯНАО", "", "", "", ""])
 
-            self.assertEqual(len(w.tax_rows(path)), 1)
+            self.assertEqual(len(w.sgsn_rows(path)), 1)
 
     def test_weekly_chat_id_uses_file_when_env_is_empty(self):
         with tempfile.TemporaryDirectory() as tmp:

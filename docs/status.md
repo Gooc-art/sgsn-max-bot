@@ -18,11 +18,11 @@
 
 ## Репозиторий и сервер
 
-- GitHub: `https://github.com/Gooc-art/sud`
+- GitHub: `https://github.com/Gooc-art/sgsn-max-bot`
 - Сервер: `localadmin@10.10.68.10`
-- Рабочая папка на сервере: `/home/localadmin/sud-app`
+- Рабочая папка на сервере: `/home/localadmin/sgsn-max-bot`
 - GitHub Actions runner: `BOTSGSN-sud`
-- Автодеплой: push в `main` обновляет `/home/localadmin/sud-app`
+- Автодеплой: push в `main` обновляет `/home/localadmin/sgsn-max-bot`
 
 ## Основной CLI
 
@@ -129,7 +129,7 @@ output/cache/cases/
 Токена MAX пока нет. Когда появится, он хранится вне репозитория:
 
 ```text
-~/.config/sud/max-bot.env
+~/.config/sgsn-max-bot/max-bot.env
 ```
 
 Шаблон:
@@ -137,22 +137,22 @@ output/cache/cases/
 ```env
 MAX_TOKEN=
 MAX_API_BASE=https://platform-api2.max.ru
-SUD_MAX_DAYS=31
+SGSN_MAX_DAYS=31
 ```
 
 Установка user-service:
 
 ```bash
-cd ~/sud-app
+cd ~/sgsn-max-bot
 ./scripts/install_max_bot_service.sh
 ```
 
 После получения токена:
 
 ```bash
-nano ~/.config/sud/max-bot.env
-systemctl --user restart sud-max-bot.service
-systemctl --user status sud-max-bot.service
+nano ~/.config/sgsn-max-bot/max-bot.env
+systemctl --user restart sgsn-max-bot.service
+systemctl --user status sgsn-max-bot.service
 ```
 
 Команды бота:
@@ -175,13 +175,13 @@ Inline-экраны:
 - Подтверждение: `✅ Запустить выгрузку`, `📅 Изменить период`, `🏛 Изменить суд`, `🏠 Главное меню`.
 - Статус: `🔄 Обновить статус`, `🏠 Главное меню`.
 
-Автоуведомление по ФНС:
+Автоуведомление по СГСН:
 
-- файл: `weekly_fns_notify.py`
-- установка: `./scripts/install_weekly_fns_timer.sh`
-- workflow: `.github/workflows/weekly-fns.yml`
+- файл: `weekly_sgsn_notify.py`
+- установка: `./scripts/install_weekly_sgsn_timer.sh`
+- workflow: `.github/workflows/weekly-sgsn.yml`
 - расписание: воскресенье ночью
-- чат: `SUD_WEEKLY_CHAT_ID` в `~/.config/sud/max-bot.env`
+- чат: `SGSN_WEEKLY_CHAT_ID` в `~/.config/sgsn-max-bot/max-bot.env`
 
 Правило меню: бот хранит ID последнего меню и редактирует его через MAX
 `PUT /messages`, поэтому меню не должно дублироваться в чате. Если MAX не
@@ -198,7 +198,7 @@ fallback.
 Обновляет серверную папку:
 
 ```text
-/home/localadmin/sud-app
+/home/localadmin/sgsn-max-bot
 ```
 
 ### export
@@ -209,7 +209,7 @@ fallback.
 
 ```bash
 gh workflow run export \
-  --repo Gooc-art/sud \
+  --repo Gooc-art/sgsn-max-bot \
   -f date_from=2026-07-20 \
   -f date_to=2026-07-26 \
   -f outdir=output/week-2026-07-20
@@ -221,20 +221,20 @@ gh workflow run export \
 - период: `2026-07-20..2026-07-26`
 - статус: `success`
 - длительность: примерно 39 минут
-- папка: `/home/localadmin/sud-app/output/week-2026-07-20`
+- папка: `/home/localadmin/sgsn-max-bot/output/week-2026-07-20`
 
 ## Как скачать отчет
 
 ```bash
-scp localadmin@10.10.68.10:/home/localadmin/sud-app/output/week-2026-07-20/report.xlsx ~/Downloads/
-scp localadmin@10.10.68.10:/home/localadmin/sud-app/output/week-2026-07-20/report.pdf ~/Downloads/
+scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.xlsx ~/Downloads/
+scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.pdf ~/Downloads/
 ```
 
 Если папка загрузок русская:
 
 ```bash
-scp localadmin@10.10.68.10:/home/localadmin/sud-app/output/week-2026-07-20/report.xlsx ~/Загрузки/
-scp localadmin@10.10.68.10:/home/localadmin/sud-app/output/week-2026-07-20/report.pdf ~/Загрузки/
+scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.xlsx ~/Загрузки/
+scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.pdf ~/Загрузки/
 ```
 
 ## Проверки

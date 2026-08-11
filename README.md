@@ -1,11 +1,10 @@
-# sud
+# sgsn-max-bot
 
-Отдельный проект для бота/выгрузчика судебных заседаний по ЯНАО.
+MAX-бот для Службы государственного строительного надзора ЯНАО.
 
 ## Идея
 
-Сервис собирает данные с официальных сайтов судов ЯНАО и делает месячную
-таблицу для просмотра/экспорта.
+Сервис собирает судебные заседания ЯНАО с участием СГСН и делает таблицу для просмотра/экспорта.
 
 Минимальная таблица:
 
@@ -84,7 +83,7 @@ IP `10.10.68.10`.
 Push в `main` автоматически выкладывает код в:
 
 ```text
-$HOME/sud-app
+$HOME/sgsn-max-bot
 ```
 
 Workflow деплоя только обновляет файлы. Для перезапуска MAX-бота используйте
@@ -97,29 +96,29 @@ Workflow деплоя только обновляет файлы. Для пер�
 Для первого запуска используется Long Polling:
 
 ```bash
-cd ~/sud-app
+cd ~/sgsn-max-bot
 MAX_TOKEN=token_from_max python3 max_bot.py --poll
 ```
 
 Установка user-service:
 
 ```bash
-cd ~/sud-app
+cd ~/sgsn-max-bot
 ./scripts/install_max_bot_service.sh
 ```
 
-Установка воскресной ночной проверки ФНС:
+Установка воскресной ночной проверки СГСН:
 
 ```bash
-cd ~/sud-app
-./scripts/install_weekly_fns_timer.sh
+cd ~/sgsn-max-bot
+./scripts/install_weekly_sgsn_timer.sh
 ```
 
 Токен хранится вне репозитория:
 
 ```bash
-nano ~/.config/sud/max-bot.env
-systemctl --user restart sud-max-bot.service
+nano ~/.config/sgsn-max-bot/max-bot.env
+systemctl --user restart sgsn-max-bot.service
 ```
 
 Команды бота:
@@ -129,13 +128,13 @@ systemctl --user restart sud-max-bot.service
 - `/week` — выгрузка за прошлую полную неделю.
 - `/period` — выбор периода.
 - `/status` — статус последней задачи.
-- `/weekly_here` — сохранить текущий групповой чат для воскресных уведомлений ФНС.
+- `/weekly_here` — сохранить текущий групповой чат для воскресных уведомлений СГСН.
 - `/cancel` — отмена ввода.
 
-Автоуведомление по ФНС:
+Автоуведомление по СГСН:
 
 ```bash
-./scripts/install_weekly_fns_timer.sh
+./scripts/install_weekly_sgsn_timer.sh
 ```
 
-Таймер или workflow `weekly-fns` запускает сбор на следующую неделю в воскресенье ночью и шлет `report.xlsx` в `SUD_WEEKLY_CHAT_ID`, если ФНС найдена.
+Таймер или workflow `weekly-sgsn` запускает сбор на следующую неделю в воскресенье ночью и шлет `report.xlsx` в `SGSN_WEEKLY_CHAT_ID`, если СГСН найдена.

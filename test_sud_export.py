@@ -38,27 +38,27 @@ class SudExportTest(unittest.TestCase):
         self.assertEqual([r[0] for r in table], ["Иванов И.И.", "Иванов И.И.", "Петров П.П.", "Без представителя"])
         self.assertEqual([r[1] for r in table], ["2", "2", "1", "1"])
 
-    def test_is_tax_party_matches_any_role(self):
-        defendant = s.Row("Суд", "2026-07-01", "", "1", "", "", "Ответчик: УФНС России по ЯНАО", "", "", "", "")
-        long_name = s.Row("Суд", "2026-07-01", "", "2", "", "", "Административный ответчик: Управление Федеральной налоговой службы по ЯНАО", "", "", "", "")
-        claimant = s.Row("Суд", "2026-07-01", "", "3", "", "", "Истец: ИФНС России по г. Муравленко; Ответчик: Иванов", "", "", "", "")
+    def test_is_sgsn_party_matches_any_role(self):
+        defendant = s.Row("Суд", "2026-07-01", "", "1", "", "", "Ответчик: СГСН ЯНАО", "", "", "", "")
+        long_name = s.Row("Суд", "2026-07-01", "", "2", "", "", "Административный ответчик: Служба государственного строительного надзора ЯНАО", "", "", "", "")
+        claimant = s.Row("Суд", "2026-07-01", "", "3", "", "", "Истец: Департамент строительного надзора; Ответчик: Иванов", "", "", "", "")
         unrelated = s.Row("Суд", "2026-07-01", "", "4", "", "", "Истец: Иванов; Ответчик: Петров", "", "", "", "")
 
-        self.assertTrue(s.is_tax_party(defendant))
-        self.assertTrue(s.is_tax_party(long_name))
-        self.assertTrue(s.is_tax_party(claimant))
-        self.assertFalse(s.is_tax_party(unrelated))
+        self.assertTrue(s.is_sgsn_party(defendant))
+        self.assertTrue(s.is_sgsn_party(long_name))
+        self.assertTrue(s.is_sgsn_party(claimant))
+        self.assertFalse(s.is_sgsn_party(unrelated))
 
-    def test_write_xlsx_adds_ufns_sheet(self):
+    def test_write_xlsx_adds_sgsn_sheet(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = s.Path(tmp) / "report.xlsx"
-            s.write_xlsx(path, [s.HEADERS], [("ФНС участвует", [s.HEADERS])])
+            s.write_xlsx(path, [s.HEADERS], [("СГСН участвует", [s.HEADERS])])
 
             with zipfile.ZipFile(path) as z:
                 self.assertIn("xl/worksheets/sheet2.xml", z.namelist())
                 workbook = z.read("xl/workbook.xml").decode()
 
-        self.assertIn("ФНС участвует", workbook)
+        self.assertIn("СГСН участвует", workbook)
 
 
 if __name__ == "__main__":

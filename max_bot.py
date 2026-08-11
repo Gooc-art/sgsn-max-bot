@@ -23,10 +23,10 @@ from sud_export import COURTS
 
 API_BASE = os.environ.get("MAX_API_BASE", "https://platform-api2.max.ru")
 TOKEN = os.environ.get("MAX_TOKEN", "")
-MAX_DAYS = int(os.environ.get("SUD_MAX_DAYS", "45"))
-EXPORT_TIMEOUT_SECONDS = int(os.environ.get("SUD_EXPORT_TIMEOUT_SECONDS", str(4 * 60 * 60)))
-HTTP_TIMEOUT_SECONDS = int(os.environ.get("SUD_HTTP_TIMEOUT_SECONDS", "20"))
-WEEKLY_CHAT_ID_FILE = Path(os.environ.get("SUD_WEEKLY_CHAT_ID_FILE", "~/.config/sud/weekly-chat-id")).expanduser()
+MAX_DAYS = int(os.environ.get("SGSN_MAX_DAYS", os.environ.get("SUD_MAX_DAYS", "45")))
+EXPORT_TIMEOUT_SECONDS = int(os.environ.get("SGSN_EXPORT_TIMEOUT_SECONDS", os.environ.get("SUD_EXPORT_TIMEOUT_SECONDS", str(4 * 60 * 60))))
+HTTP_TIMEOUT_SECONDS = int(os.environ.get("SGSN_HTTP_TIMEOUT_SECONDS", os.environ.get("SUD_HTTP_TIMEOUT_SECONDS", "20")))
+WEEKLY_CHAT_ID_FILE = Path(os.environ.get("SGSN_WEEKLY_CHAT_ID_FILE", "~/.config/sgsn-max-bot/weekly-chat-id")).expanduser()
 
 
 @dataclass
@@ -76,7 +76,7 @@ def request(method: str, path: str, params: dict | None = None, body: dict | Non
 
 
 def multipart_upload(url: str, path: Path) -> dict:
-    boundary = "----sud" + uuid.uuid4().hex
+    boundary = "----sgsn" + uuid.uuid4().hex
     ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     head = (
         f"--{boundary}\r\n"
@@ -356,7 +356,7 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
 
     if action in {"/start", "start", "Старт", "main"}:
         sess.step = ""
-        show_menu(target, "Бот делает выгрузку судебных дел ЯНАО в Excel/PDF/CSV.", main_buttons())
+        show_menu(target, "Бот СГСН ЯНАО делает выгрузку судебных дел в Excel/PDF/CSV.", main_buttons())
     elif action in {"/month", "month"}:
         sess.date_from, sess.date_to = last_full_month()
         sess.court = None
@@ -387,7 +387,7 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
             show_menu(target, f"Последняя задача: {job.status}. Суд: {court_name(job.court)}. Записей: {job.rows}. Ошибка: {job.error or '-'}", [[("🔄 Обновить статус", "status")], [("🏠 Главное меню", "main")]])
     elif action == "/weekly_here":
         if save_weekly_chat(target):
-            show_menu(target, "Этот чат сохранен для воскресных уведомлений по ФНС.", main_buttons())
+            show_menu(target, "Этот чат сохранен для воскресных уведомлений по СГСН.", main_buttons())
         else:
             show_menu(target, "Команду нужно отправить в групповом чате.", main_buttons())
     elif action in {"cancel", "/cancel"}:

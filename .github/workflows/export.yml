@@ -10,7 +10,7 @@ on:
         description: End date YYYY-MM-DD
         required: true
       outdir:
-        description: Output directory under ~/sud-app
+        description: Output directory under ~/sgsn-max-bot
         required: true
         default: output/manual-export
 
@@ -21,19 +21,25 @@ jobs:
     steps:
       - name: Update app
         run: |
-          git -C "$HOME/sud-app" fetch origin main
-          git -C "$HOME/sud-app" reset --hard origin/main
+          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
+            set -eu
+            git -C "$HOME/sgsn-max-bot" fetch origin main
+            git -C "$HOME/sgsn-max-bot" reset --hard origin/main
+          '
       - name: Run export
         run: |
-          cd "$HOME/sud-app"
-          mkdir -p "${{ inputs.outdir }}"
-          flock -n /tmp/sud_export.lock timeout 75m \
+          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
+            set -eu
+            cd "$HOME/sgsn-max-bot"
+            mkdir -p "${{ inputs.outdir }}"
+            flock -n /tmp/sgsn_export.lock timeout 75m \
             python3 sud_export.py \
               --from "${{ inputs.date_from }}" \
               --to "${{ inputs.date_to }}" \
               --outdir "${{ inputs.outdir }}" \
               --timeout 8 \
               --sort-by-lawyer
+          '
       - name: Show result
         run: |
-          ls -lh "$HOME/sud-app/${{ inputs.outdir }}"
+          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 'ls -lh "$HOME/sgsn-max-bot/${{ inputs.outdir }}"'

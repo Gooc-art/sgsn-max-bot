@@ -1,4 +1,4 @@
-name: weekly-fns
+name: weekly-sgsn
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       force_send:
-        description: Send test message/file even when FNS rows are 0
+        description: Send test message/file even when SGSN rows are 0
         required: false
         default: "false"
       skip_export:
@@ -19,21 +19,20 @@ on:
         default: ""
 
 jobs:
-  weekly-fns:
+  weekly-sgsn:
     runs-on: self-hosted
     timeout-minutes: 90
     steps:
       - name: Update app
         run: |
-          git -C "$HOME/sud-app" fetch origin main
-          git -C "$HOME/sud-app" reset --hard origin/main
-          chmod +x "$HOME/sud-app/weekly_fns_notify.py"
-      - name: Run weekly FNS notification
+          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
+            set -eu
+            git -C "$HOME/sgsn-max-bot" fetch origin main
+            git -C "$HOME/sgsn-max-bot" reset --hard origin/main
+            chmod +x "$HOME/sgsn-max-bot/weekly_sgsn_notify.py"
+          '
+      - name: Run weekly SGSN notification
         run: |
-          cd "$HOME/sud-app"
-          set -a
-          . "$HOME/.config/sud/max-bot.env"
-          set +a
           args=
           if [ "${{ github.event.inputs.force_send }}" = "true" ]; then
             args=--force-send
@@ -44,4 +43,11 @@ jobs:
           if [ -n "${{ github.event.inputs.outdir }}" ]; then
             args="$args --outdir ${{ github.event.inputs.outdir }}"
           fi
-          flock -n /tmp/sud_weekly_fns.lock timeout 75m python3 weekly_fns_notify.py --timeout 8 $args
+          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 "
+            set -eu
+            cd \"\$HOME/sgsn-max-bot\"
+            set -a
+            . \"\$HOME/.config/sgsn-max-bot/max-bot.env\"
+            set +a
+            flock -n /tmp/sgsn_weekly.lock timeout 75m python3 weekly_sgsn_notify.py --timeout 8 $args
+          "

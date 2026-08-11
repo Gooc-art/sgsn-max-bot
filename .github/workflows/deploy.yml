@@ -9,11 +9,14 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy locally
+      - name: Deploy over SSH
         run: |
-          if [ ! -d "$HOME/sud-app/.git" ]; then
-            git clone https://github.com/Gooc-art/sud.git "$HOME/sud-app"
-          fi
-          git -C "$HOME/sud-app" fetch origin main
-          git -C "$HOME/sud-app" reset --hard origin/main
-          chmod +x "$HOME/sud-app/sud_export.py"
+          ssh -o StrictHostKeyChecking=accept-new localadmin@10.10.68.10 '
+            set -eu
+            if [ ! -d "$HOME/sgsn-max-bot/.git" ]; then
+              git clone https://github.com/Gooc-art/sgsn-max-bot.git "$HOME/sgsn-max-bot"
+            fi
+            git -C "$HOME/sgsn-max-bot" fetch origin main
+            git -C "$HOME/sgsn-max-bot" reset --hard origin/main
+            chmod +x "$HOME/sgsn-max-bot/sud_export.py" "$HOME/sgsn-max-bot/weekly_sgsn_notify.py"
+          '
