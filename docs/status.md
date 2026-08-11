@@ -1,161 +1,90 @@
-# Статус проекта sud
+# Статус проекта sgsn-max-bot
 
-Дата фиксации: 2026-07-29.
+Дата фиксации: 2026-08-11.
 
-## Что делаем
-
-Проект собирает судебные заседания судов ЯНАО с официальных сайтов `sudrf.ru`
-и формирует выгрузки:
-
-- Excel: `report.xlsx`
-- PDF: `report.pdf`
-- HTML: `report.html`
-- CSV: `report.csv`
-- лог ошибок: `run_log.csv`
-
-Официальный бесплатный API/CSV/XLSX для расписаний и карточек дел не найден.
-Рабочий источник — HTML-страницы `Судебное делопроизводство` на сайтах судов.
-
-## Репозиторий и сервер
+## Версия в проде
 
 - GitHub: `https://github.com/Gooc-art/sgsn-max-bot`
+- Последний функциональный commit: `b57e60c` (`Broaden SGSN party matching`)
+- Последний deploy: `31463998259`, статус `success`
+- MAX setup workflow: `31463399563`, статус `success`
 - Сервер: `localadmin@10.10.68.10`
-- Рабочая папка на сервере: `/home/localadmin/sgsn-max-bot`
-- GitHub Actions runner: `BOTSGSN-sud`
-- Автодеплой: push в `main` обновляет `/home/localadmin/sgsn-max-bot`
+- Рабочая папка: `/home/localadmin/sgsn-max-bot`
+- Runner: `BOTSGSN-sgsn-max-bot`
+- Service: `sgsn-max-bot.service`
+- Env: `/home/localadmin/.config/sgsn-max-bot/max-bot.env`
 
-## Основной CLI
+## Что делает бот
 
-Файл: `sud_export.py`.
+MAX-бот запускает выгрузку судебных заседаний ЯНАО с сайтов `sudrf.ru`.
+Основная выгрузка идет по всем судам из `COURTS`, если пользователь не выбрал
+конкретный суд.
 
-Пример запуска:
+Файлы результата:
+
+- `report.xlsx`
+- `report.pdf`
+- `report.html`
+- `report.csv`
+- `run_log.csv`
+
+В `report.xlsx` есть:
+
+- `Report` — все найденные строки;
+- `СГСН участвует` — только строки, где в сторонах найдена Служба государственного строительного надзора ЯНАО.
+
+## Фильтр СГСН
+
+Функция: `is_sgsn_party()` в `sud_export.py`.
+
+Учитываются варианты:
+
+- `СГСН`
+- `С.Г.С.Н.`
+- `ГСН`
+- `Г.С.Н.`
+- `служба ГСН`
+- `Служба государственного строительного надзора ...`
+
+Широкое совпадение вроде `Департамент строительного надзора` специально не
+считается СГСН, чтобы не добавлять лишние строки во вкладку.
+
+## Запуск вручную
 
 ```bash
+cd ~/sgsn-max-bot
 python3 sud_export.py \
-  --from 2026-07-20 \
-  --to 2026-07-26 \
-  --outdir output/week-2026-07-20 \
+  --from 2026-08-11 \
+  --to 2026-08-11 \
+  --outdir output/manual \
   --timeout 8 \
   --sort-by-lawyer
 ```
 
-Опции:
+Smoke без обогащения карточек:
 
-- `--from YYYY-MM-DD` — дата начала.
-- `--to YYYY-MM-DD` — дата окончания.
-- `--outdir PATH` — папка результата.
-- `--court HOST` — ограничить одним судом; можно повторять.
-- `--timeout N` — таймаут HTTP-запросов.
-- `--max-cases N` — ограничить обогащение карточек для smoke-тестов.
-- `--sort-by-lawyer` — сортировать отчет по представителям/адвокатам.
-- `--refresh` — перекачать HTML заново, не брать кэш.
-
-## Суды в MVP
-
-- `oblsud--ynao.sudrf.ru`
-- `salehardsky--ynao.sudrf.ru`
-- `noyabrsky--ynao.sudrf.ru`
-- `nadymsky--ynao.sudrf.ru`
-- `novourengoysky--ynao.sudrf.ru`
-- `muravlenkovsky--ynao.sudrf.ru`
-- `tazovsky--ynao.sudrf.ru`
-- `yamalsky--ynao.sudrf.ru`
-- `labytnangsky.ynao.sudrf.ru`
-
-## Колонки отчета
-
-- `Группа представителя`
-- `Кол-во дел у представителя`
-- `Суд`
-- `Дата заседания`
-- `Время`
-- `Номер дела`
-- `Категория / причина`
-- `Судья`
-- `Стороны`
-- `Адвокаты / представители`
-- `Результат / статус`
-- `Ссылка на карточку`
-- `Статус проверки`
-
-Сортировка по представителям:
-
-1. Сначала представители/адвокаты с большим числом дел.
-2. Их дела идут подряд.
-3. Внутри группы сортировка по дате, времени и номеру дела.
-4. Дела без представителя идут в конце группой `Без представителя`.
-
-Упрощение MVP: если в деле несколько представителей, строка попадает в группу
-первого найденного представителя, но в колонке `Адвокаты / представители`
-остаются все найденные представители.
-
-## HTML-кэш
-
-Выгрузчик сохраняет сырой HTML:
-
-```text
-output/cache/schedules/
-output/cache/cases/
+```bash
+python3 sud_export.py \
+  --from 2026-08-11 \
+  --to 2026-08-11 \
+  --outdir /tmp/sgsn-one-day-smoke \
+  --timeout 8 \
+  --max-cases 0 \
+  --sort-by-lawyer
 ```
 
-Зачем:
+Последний локальный smoke:
 
-- повторный запуск быстрее;
-- меньше запросов к `sudrf.ru`;
-- можно смотреть исходные страницы при ошибках парсинга.
-
-Ожидаемый размер:
-
-- неделя по региону: примерно `50-300 МБ`;
-- месяц по региону: примерно `200 МБ - 1+ ГБ`.
-
-## PDF
-
-`report.html` — главный печатный шаблон с нормальной кириллицей.
-
-`report.pdf` нормально формируется, если на сервере есть один из конвертеров:
-
-- `libreoffice`
-- `wkhtmltopdf`
-- `chromium`
-
-Без конвертера используется простая резервная PDF-версия; в некоторых
-просмотрщиках кириллица может отображаться некорректно.
+- дата: `2026-08-11`
+- суды: все
+- режим: `--max-cases 0`
+- строк: `218`
+- `report.xlsx` создан
+- вкладка `СГСН участвует` есть
 
 ## MAX-бот
 
-Файл: `max_bot.py`.
-
-Токена MAX пока нет. Когда появится, он хранится вне репозитория:
-
-```text
-~/.config/sgsn-max-bot/max-bot.env
-```
-
-Шаблон:
-
-```env
-MAX_TOKEN=
-MAX_API_BASE=https://platform-api2.max.ru
-SGSN_MAX_DAYS=31
-```
-
-Установка user-service:
-
-```bash
-cd ~/sgsn-max-bot
-./scripts/install_max_bot_service.sh
-```
-
-После получения токена:
-
-```bash
-nano ~/.config/sgsn-max-bot/max-bot.env
-systemctl --user restart sgsn-max-bot.service
-systemctl --user status sgsn-max-bot.service
-```
-
-Команды бота:
+Команды:
 
 - `/start`
 - `/month`
@@ -165,105 +94,39 @@ systemctl --user status sgsn-max-bot.service
 - `/weekly_here`
 - `/cancel`
 
-Бот запускает выгрузки с `--sort-by-lawyer`.
+Перезапуск:
 
-Inline-экраны:
-
-- Главное меню: `📊 Выгрузка за месяц`, `📅 Выбрать период`, `📌 Статус выгрузки`, `❌ Отмена`.
-- Выбор периода: `📆 Текущая неделя`, `📊 Прошлая неделя`, `✏️ Свой период`, `⬅️ Назад`, `🏠 Главное меню`.
-- Выбор суда: `🏛 Все суды`, отдельные суды ЯНАО, `⬅️ Назад`, `🏠 Главное меню`.
-- Подтверждение: `✅ Запустить выгрузку`, `📅 Изменить период`, `🏛 Изменить суд`, `🏠 Главное меню`.
-- Статус: `🔄 Обновить статус`, `🏠 Главное меню`.
-
-Автоуведомление по СГСН:
-
-- файл: `weekly_sgsn_notify.py`
-- установка: `./scripts/install_weekly_sgsn_timer.sh`
-- workflow: `.github/workflows/weekly-sgsn.yml`
-- расписание: воскресенье ночью
-- чат: `SGSN_WEEKLY_CHAT_ID` в `~/.config/sgsn-max-bot/max-bot.env`
-
-Правило меню: бот хранит ID последнего меню и редактирует его через MAX
-`PUT /messages`, поэтому меню не должно дублироваться в чате. Если MAX не
-вернет ID сообщения или редактирование не пройдет, бот отправит новое меню как
-fallback.
+```bash
+systemctl --user restart sgsn-max-bot.service
+systemctl --user status sgsn-max-bot.service --no-pager
+```
 
 ## GitHub Actions
 
-### deploy
+- `.github/workflows/deploy.yml` — автодеплой при push в `main`.
+- `.github/workflows/max-bot.yml` — ручная настройка env и рестарт MAX-бота.
+- `.github/workflows/export.yml` — ручная выгрузка.
+- `.github/workflows/weekly-sgsn.yml` — воскресная проверка СГСН.
 
-Файл: `.github/workflows/deploy.yml`.
+Секреты GitHub:
 
-Запускается на push в `main`.
-Обновляет серверную папку:
-
-```text
-/home/localadmin/sgsn-max-bot
-```
-
-### export
-
-Файл: `.github/workflows/export.yml`.
-
-Ручной запуск выгрузки через GitHub Actions:
-
-```bash
-gh workflow run export \
-  --repo Gooc-art/sgsn-max-bot \
-  -f date_from=2026-07-20 \
-  -f date_to=2026-07-26 \
-  -f outdir=output/week-2026-07-20
-```
-
-Последний полный недельный запуск:
-
-- run id: `30449350562`
-- период: `2026-07-20..2026-07-26`
-- статус: `success`
-- длительность: примерно 39 минут
-- папка: `/home/localadmin/sgsn-max-bot/output/week-2026-07-20`
-
-## Как скачать отчет
-
-```bash
-scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.xlsx ~/Downloads/
-scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.pdf ~/Downloads/
-```
-
-Если папка загрузок русская:
-
-```bash
-scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.xlsx ~/Загрузки/
-scp localadmin@10.10.68.10:/home/localadmin/sgsn-max-bot/output/week-2026-07-20/report.pdf ~/Загрузки/
-```
+- `MAX_TOKEN` — токен MAX-бота. В репозиторий не записывается.
 
 ## Проверки
 
-Локально:
-
 ```bash
+python3 -m py_compile sud_export.py max_bot.py weekly_sgsn_notify.py
 python3 -m unittest -q
-python3 -m py_compile sud_export.py max_bot.py
 ```
 
-Smoke одного суда:
+Последняя проверка перед деплоем:
 
-```bash
-python3 sud_export.py \
-  --from 2026-07-20 \
-  --to 2026-07-26 \
-  --court salehardsky--ynao.sudrf.ru \
-  --outdir /tmp/sud-week-enriched10 \
-  --timeout 8 \
-  --max-cases 10 \
-  --sort-by-lawyer
-```
+- compile: OK
+- tests: OK, `30`
+- deploy: OK
 
-## Известные ограничения
+## Что не сделано
 
-- Данные берутся только из опубликованных HTML-страниц `sudrf.ru`.
-- Если сайт скрывает данные, выгрузчик не может восстановить их.
-- Отсутствие адвоката в карточке не доказывает, что адвоката нет.
-- Полная неделя по всем судам занимает десятки минут.
-- Основная нагрузка — ожидание `sudrf.ru`, не CPU сервера.
-- Для стабильного PDF нужен системный HTML-to-PDF конвертер.
+Отдельный источник данных СГСН не подключен. Сейчас проект ищет участие СГСН
+в судебных карточках `sudrf.ru`. Новый источник добавлять только когда он
+будет известен.
