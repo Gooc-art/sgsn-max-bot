@@ -44,4 +44,4 @@ EOF
 
 systemctl --user daemon-reload
 systemctl --user enable --now sgsn-weekly-sgsn.timer
-systemctl --user status sgsn-weekly-sgsn.timer || true
+systemctl --user status sgsn-weekly-sgsn.timer --no-pager || true

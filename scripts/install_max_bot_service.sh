@@ -33,4 +33,4 @@ EOF
 
 systemctl --user daemon-reload
 systemctl --user enable sgsn-max-bot.service
-systemctl --user status sgsn-max-bot.service || true
+systemctl --user status sgsn-max-bot.service --no-pager || true
