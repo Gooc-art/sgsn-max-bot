@@ -57,8 +57,8 @@ def run_export(start: date, end: date, outdir: Path, timeout: int) -> None:
     print((result.stdout or result.stderr).strip())
 
 
-def notify(chat_id: str, start: date, end: date, outdir: Path, count: int, force: bool = False) -> None:
-    target = {"chat_id": chat_id}
+def notify(recipient: str, start: date, end: date, outdir: Path, count: int, force: bool = False) -> None:
+    target = weekly_target(recipient)
     if count:
         text = f"СГСН найдена в судебных заседаниях на {start:%d.%m.%Y}-{end:%d.%m.%Y}: {count}. Отправляю Excel."
     else:
@@ -74,6 +74,15 @@ def weekly_chat_id() -> str:
     if CHAT_ID_FILE.exists():
         return CHAT_ID_FILE.read_text(encoding="utf-8").strip()
     return ""
+
+
+def weekly_target(recipient: str) -> dict[str, int | str]:
+    raw = recipient.strip()
+    if raw.startswith("user:"):
+        return {"user_id": raw.split(":", 1)[1]}
+    if raw.startswith("chat:"):
+        return {"chat_id": raw.split(":", 1)[1]}
+    return {"chat_id": raw}
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -32,6 +32,11 @@ class WeeklySgsnNotifyTest(unittest.TestCase):
             finally:
                 w.CHAT_ID_FILE = old_file
 
+    def test_weekly_target_supports_private_and_legacy_chat(self):
+        self.assertEqual(w.weekly_target("user:42"), {"user_id": "42"})
+        self.assertEqual(w.weekly_target("chat:777"), {"chat_id": "777"})
+        self.assertEqual(w.weekly_target("777"), {"chat_id": "777"})
+
 
 if __name__ == "__main__":
     unittest.main()

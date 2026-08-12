@@ -261,11 +261,12 @@ def show_confirm(target: dict, sess: Session) -> None:
 
 
 def save_weekly_chat(target: dict) -> bool:
-    chat_id = target.get("chat_id")
-    if not chat_id:
+    recipient = target.get("chat_id") or target.get("user_id")
+    if not recipient:
         return False
     WEEKLY_CHAT_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
-    WEEKLY_CHAT_ID_FILE.write_text(str(chat_id), encoding="utf-8")
+    prefix = "chat" if target.get("chat_id") else "user"
+    WEEKLY_CHAT_ID_FILE.write_text(f"{prefix}:{recipient}", encoding="utf-8")
     return True
 
 
@@ -387,9 +388,9 @@ def handle(target: dict, text: str, payload: str = "", callback_id: str = "") ->
             show_menu(target, f"Последняя задача: {job.status}. Суд: {court_name(job.court)}. Записей: {job.rows}. Ошибка: {job.error or '-'}", [[("🔄 Обновить статус", "status")], [("🏠 Главное меню", "main")]])
     elif action == "/weekly_here":
         if save_weekly_chat(target):
-            show_menu(target, "Этот чат сохранен для воскресных уведомлений по СГСН.", main_buttons())
+            show_menu(target, "Получатель сохранен для воскресных уведомлений по СГСН.", main_buttons())
         else:
-            show_menu(target, "Команду нужно отправить в групповом чате.", main_buttons())
+            show_menu(target, "Не удалось определить получателя уведомлений.", main_buttons())
     elif action in {"cancel", "/cancel"}:
         sess.step = ""
         show_menu(target, "Отменено.", main_buttons())

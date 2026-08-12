@@ -261,8 +261,9 @@ class MaxBotTest(unittest.TestCase):
         with mock.patch.object(b, "WEEKLY_CHAT_ID_FILE", b.Path("/tmp/sud-weekly-chat-test")):
             try:
                 self.assertTrue(b.save_weekly_chat({"chat_id": 777, "user_id": 42}))
-                self.assertEqual(b.Path("/tmp/sud-weekly-chat-test").read_text(encoding="utf-8"), "777")
-                self.assertFalse(b.save_weekly_chat({"user_id": 42}))
+                self.assertEqual(b.Path("/tmp/sud-weekly-chat-test").read_text(encoding="utf-8"), "chat:777")
+                self.assertTrue(b.save_weekly_chat({"user_id": 42}))
+                self.assertEqual(b.Path("/tmp/sud-weekly-chat-test").read_text(encoding="utf-8"), "user:42")
             finally:
                 b.Path("/tmp/sud-weekly-chat-test").unlink(missing_ok=True)
 
