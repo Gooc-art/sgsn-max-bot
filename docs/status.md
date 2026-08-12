@@ -1,13 +1,20 @@
 # Статус проекта sgsn-max-bot
 
-Дата фиксации: 2026-08-11.
+Дата фиксации: 2026-08-12.
+
+## Память проекта
+
+- Правильный репозиторий: `Gooc-art/sgsn-max-bot`.
+- Локальный checkout для работы Codex: `/srv/projects/sud_sgsn`.
+- Назначение: сбор судебных заседаний всех судов ЯНАО и поиск участия СГСН.
+- Не путать с `/home/Gooc/skud`, `/srv/projects/sud`, `/srv/projects/sgsn`.
 
 ## Версия в проде
 
 - GitHub: `https://github.com/Gooc-art/sgsn-max-bot`
-- Последний функциональный commit: `b57e60c` (`Broaden SGSN party matching`)
-- Последний deploy: `31463998259`, статус `success`
-- MAX setup workflow: `31463399563`, статус `success`
+- Последний функциональный commit: `2a4a153` (`Allow weekly SGSN notifications in private chat`)
+- Последний deploy: `31568556941`, статус `success`
+- MAX setup/restart workflow: `31568616336`, статус `success`
 - Сервер: `localadmin@10.10.68.10`
 - Рабочая папка: `/home/localadmin/sgsn-max-bot`
 - Runner: `BOTSGSN-sgsn-max-bot`
